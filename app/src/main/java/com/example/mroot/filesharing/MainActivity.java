@@ -3,8 +3,6 @@ package com.example.mroot.filesharing;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Color;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -14,7 +12,6 @@ import android.widget.Toast;
 
 import com.leon.lfilepickerlibrary.LFilePicker;
 
-import java.io.File;
 import java.util.List;
 
 import butterknife.BindView;
@@ -29,6 +26,7 @@ public class MainActivity extends AppCompatActivity {
     private long exitTime = 0;
     private int REQUESTCODE_FROM_ACTIVITY = 1000;
     private static Context context;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -51,7 +49,11 @@ public class MainActivity extends AppCompatActivity {
 
     @OnClick(R.id.btn_test)
     public void test() {
-        sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(),"hello, world!");
+        //sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(),"hello, world!");
+        String path="/storage/emulated/0/1NCSharing";
+        Intent intent = new Intent(MainActivity.this, com.example.zpc.file.MainActivity.class);
+        intent.putExtra("extra_path",path);
+        startActivity(intent);
     }
 
     //处理各个线程发来的消息
@@ -70,7 +72,6 @@ public class MainActivity extends AppCompatActivity {
             super.handleMessage(msg);
         }
     };
-
 
 
     @Override
