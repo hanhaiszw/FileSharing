@@ -41,7 +41,27 @@ public class Utils {
         return Environment.getExternalStorageDirectory().getAbsolutePath();
     }
 
+    /*** 获取文件夹大小 ***/
+    public static long getFolderSize(File f){
+        long size = 0;
+        File flist[] = f.listFiles();
+        for (int i = 0; i < flist.length; i++) {
+            if (flist[i].isDirectory()) {
+                size = size + getFolderSize(flist[i]);
+            } else {
+                size = size + flist[i].length();
+            }
+        }
+        return size;
+    }
 
+    //获取文件夹下 项目数
+    public static long getFolderItemNum(File f){
+        long size = 0;
+        File flist[] = f.listFiles();
+        size = flist.length;
+        return size;
+    }
     /**
      * 通过传入的路径,返回该路径下的所有的文件和文件夹列表
      *
@@ -69,9 +89,13 @@ public class Utils {
                         ) {
                     file.isHidden();//  是否是隐藏文件
                     // 获取文件夹目录结构
-                    item.icon = R.drawable.folder;//图标
-                    item.bytesize = file.length();
-                    item.size = getSize(item.bytesize);//大小
+                    //item.icon = R.drawable.folder;//图标
+                    item.icon = R.drawable.folder_style_yellow;//图标 hanhai修改
+                    //item.bytesize = file.length();
+                    //item.bytesize = getFolderSize(file);
+                    //item.size = getSize(item.bytesize);//大小
+                    //若是文件夹显示项数
+                    item.size = getFolderItemNum(file)+"项 ";
                     item.type = MainActivity.T_DIR;
 
                 } else if (file.isFile()) {// 文件

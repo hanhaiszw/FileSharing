@@ -25,5 +25,11 @@
         android:text="Test"
         android:id="@+id/btn_test"
         />
+    <Button
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="打开热点"
+        android:id="@+id/btn_openAP"
+        />
 
 </LinearLayout>

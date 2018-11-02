@@ -26,6 +26,10 @@ android {
             path "CMakeLists.txt"
         }
     }
+    compileOptions {
+        targetCompatibility 1.8
+        sourceCompatibility 1.8
+    }
 }
 
 dependencies {
@@ -41,5 +45,12 @@ dependencies {
     annotationProcessor 'com.jakewharton:butterknife-compiler:9.0.0-rc1'
     // file picker
     implementation 'com.leon:lfilepickerlibrary:1.8.0'
+    // 文件管理器
     implementation project(':FileManager')
+    // 全局抓获异常
+    implementation 'com.mauiie.aech:AECrashHandler:0.0.1'
+    // material dialog
+    implementation 'com.afollestad.material-dialogs:core:0.9.6.0'
+    // permission
+    implementation 'com.yanzhenjie:permission:2.0.0-rc12'
 }

@@ -14,8 +14,8 @@ public class NCUtils {
         InitGalois();
     }
 
-    private NCUtils() {
-    }
+
+    private NCUtils() {}
 
     public static byte[] mul(byte[] a, byte[] b) {
         byte[] c = Multiply(a, 2, 2, b, 2, 2);

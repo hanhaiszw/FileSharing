@@ -56,8 +56,8 @@ public class MainActivity extends Activity implements IProxy, SearchView.OnQuery
     String parentPath; // 上级目录
 
 
-    String ROOT = Utils.getSDCardPath(); //SDCard根目录
-    //String ROOT = "/storage/emulated/0/1NCSharing"; //SDCard根目录
+    String rootPath;//SDCard根目录
+    final String ROOT = Utils.getSDCardPath(); //SDCard根目录
     public static final int T_DIR = 0;// 文件夹
     public static final int T_FILE = 1;// 文件
 
@@ -85,8 +85,8 @@ public class MainActivity extends Activity implements IProxy, SearchView.OnQuery
 
         Intent intent = getIntent();
         String path = intent.getStringExtra("extra_path");
-        ROOT = path;
-        updateData(ROOT);
+        rootPath = path;
+        updateData(rootPath);
 
 
         Utils.KEY = "";//初始化
@@ -140,6 +140,16 @@ public class MainActivity extends Activity implements IProxy, SearchView.OnQuery
      */
 
     public String submitPath(String path) {
+        //原代码
+//        if (path.equals(ROOT)) {
+//            return "/";
+//        } else {
+//            String PathCurrent = currPath.substring(ROOT.length());
+//            return PathCurrent;
+//        }
+
+        //hanhai修改
+
         if (path.equals(ROOT)) {
             return "/";
         } else {
@@ -585,7 +595,7 @@ public class MainActivity extends Activity implements IProxy, SearchView.OnQuery
 //        }
 
         // 返回 --> 打开上级
-        if (currPath.equals(ROOT)) {
+        if (currPath.equals(rootPath)) {
             // 退出流程
             getExit();
         } else {
