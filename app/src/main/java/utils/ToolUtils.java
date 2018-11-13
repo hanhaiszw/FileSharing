@@ -57,6 +57,23 @@ public class ToolUtils {
         return folderPath;
     }
 
+    //判断文件是否存在
+    public static boolean isFileExists(String path, String fileName){
+        File myFile = new File(path + File.separator + fileName);
+        return myFile.exists();
+    }
+
+    public static File createFile(String path, String fileName){
+        File myFile = new File(path + File.separator + fileName);
+        if(!myFile.exists()){
+            try {
+                myFile.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return myFile;
+    }
     /**
      *
      * @param path

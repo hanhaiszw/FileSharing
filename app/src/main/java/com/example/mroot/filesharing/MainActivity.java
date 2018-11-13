@@ -30,6 +30,7 @@ import cache.EncodeFile;
 import data.CachePath;
 import data.MsgType;
 import nc.NCUtils;
+import utils.MyThreadPool;
 import utils.ToolUtils;
 import wifi.WifiAPControl;
 
@@ -118,8 +119,13 @@ public class MainActivity extends AppCompatActivity {
                 String filePath = list.get(0);
                 Toast.makeText(context, filePath, Toast.LENGTH_SHORT).show();
                 File file = new File(filePath);
-                EncodeFile encodeFile=new EncodeFile();
-                encodeFile.init(file,4);
+
+                //初始化待发送文件
+                MyThreadPool.execute(() -> {
+                    EncodeFile encodeFile = EncodeFile.getSingleton();
+                    encodeFile.init(file,4);
+                });
+
             }
         }
     }

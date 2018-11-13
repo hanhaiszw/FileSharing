@@ -7,14 +7,22 @@ import data.CachePath;
 import utils.ToolUtils;
 
 
+//单例类
 public class EncodeFile {
     private String fileName;
     private String folderPath;
     private int K;
     private Vector<PartFile> partFileVector;
 
-    public EncodeFile() {
+    private static EncodeFile encodeFile = new EncodeFile();
+
+    private EncodeFile() {
         partFileVector = new Vector<>();
+    }
+
+    //单例
+    public static EncodeFile getSingleton(){
+        return encodeFile;
     }
 
     //对文件进行分片预处理
@@ -38,7 +46,10 @@ public class EncodeFile {
             partFile.initPartFile(folderPath,i,file,startPos,len,K);
             partFileVector.add(partFile);
         }
+
     }
+
+
 
 
 }
