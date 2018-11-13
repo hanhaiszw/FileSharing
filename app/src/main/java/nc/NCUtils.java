@@ -22,11 +22,6 @@ public class NCUtils {
         return c;
     }
 
-    @Override
-    protected void finalize() throws Throwable {
-        super.finalize();
-        UninitGalois();
-    }
 
     /**
      * 只生成一个再编码文件

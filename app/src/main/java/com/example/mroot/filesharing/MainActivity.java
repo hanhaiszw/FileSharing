@@ -20,17 +20,20 @@ import com.mauiie.aech.AECrashHelper;
 import com.yanzhenjie.permission.AndPermission;
 import com.yanzhenjie.permission.Permission;
 
+import java.io.File;
 import java.util.List;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
+import cache.EncodeFile;
 import data.CachePath;
 import data.MsgType;
-import wifi.APAdmin;
-import wifi.WifiAPBase;
+import nc.NCUtils;
+import utils.ToolUtils;
 import wifi.WifiAPControl;
-import wifi.WifiAdmin;
+
+
 
 public class MainActivity extends AppCompatActivity {
 
@@ -41,23 +44,23 @@ public class MainActivity extends AppCompatActivity {
     private static Context context;
 
     WifiAPControl wifiAPControl;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
         context = MainActivity.this;
-        tv.setText("hello");
+        //tv.setText("hello");
 
         requestPermissions();
 
         //全局抓取异常   并存储在本地
         AECrashHelper.initCrashHandler(getApplication(),
                 new AECHConfiguration.Builder()
-                        .setLocalFolderPath("/storage/emulated/0/1Sharing") //配置日志信息存储的路径
+                        .setLocalFolderPath(CachePath.CRASH_PATH) //配置日志信息存储的路径
                         .setSaveToLocal(true).build()   //开启存储在本地功能
         );
-
 
 
         wifiAPControl = new WifiAPControl(this);
@@ -76,7 +79,9 @@ public class MainActivity extends AppCompatActivity {
 
     @OnClick(R.id.btn_test)
     public void test() {
-        wifiAPControl.openWifi();
+        //wifiAPControl.openWifi();
+        String s = "abcdefghijklmnopqrstuvwxyz";
+        ToolUtils.writeToFile(CachePath.APP_PATH,"test.txt",s.getBytes(),s.getBytes().length,false);
     }
 
     @OnClick(R.id.btn_openAP)
@@ -109,9 +114,12 @@ public class MainActivity extends AppCompatActivity {
             if (requestCode == REQUESTCODE_FROM_ACTIVITY) {
                 //在这里获取到选择的文件完整路径
                 List<String> list = data.getStringArrayListExtra("paths");
-                for (String s : list) {
-                    Toast.makeText(this, s, Toast.LENGTH_SHORT).show();
-                }
+                //这里用的单选
+                String filePath = list.get(0);
+                Toast.makeText(context, filePath, Toast.LENGTH_SHORT).show();
+                File file = new File(filePath);
+                EncodeFile encodeFile=new EncodeFile();
+                encodeFile.init(file,4);
             }
         }
     }
@@ -124,6 +132,7 @@ public class MainActivity extends AppCompatActivity {
             exitTime = System.currentTimeMillis();
         } else {
             finish();
+            NCUtils.UninitGalois();
             //不会调用周期函数，如onDestroy()
             System.exit(0);
         }
@@ -160,7 +169,8 @@ public class MainActivity extends AppCompatActivity {
             //文件管理器
             case R.id.item_file_manager:
                 String path = CachePath.APP_PATH;
-                Intent intent = new Intent(MainActivity.this, com.example.zpc.file.MainActivity.class);
+                Intent intent = new Intent(MainActivity.this,
+                        com.example.zpc.file.MainActivity.class);
                 intent.putExtra("extra_path", path);
                 startActivity(intent);
                 break;
@@ -200,7 +210,6 @@ public class MainActivity extends AppCompatActivity {
      */
     private void requestPermissions() {
         // 检查权限是否获取（android6.0及以上系统可能默认关闭权限，且没提示）
-
         AndPermission.with(this)
                 .runtime()
                 .permission(Permission.Group.STORAGE)
@@ -212,6 +221,5 @@ public class MainActivity extends AppCompatActivity {
                 })
                 .start();
     }
-
 
 }

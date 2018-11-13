@@ -9,10 +9,10 @@ public class CachePath {
     public final static String LOG_PATH;   //文件接收时间等信息目录
 
     static {
-        APP_PATH = ToolUtils.creatFolder(ToolUtils.getSDCardPath(), "0FileSharing");
-        TEMP_PATH = ToolUtils.creatFolder(APP_PATH, "Temp");
-        CRASH_PATH = ToolUtils.creatFolder(APP_PATH, "Crash");
-        LOG_PATH = ToolUtils.creatFolder(APP_PATH, "Log");
+        APP_PATH = ToolUtils.createFolder(ToolUtils.getSDCardPath(), "0FileSharing");
+        TEMP_PATH = ToolUtils.createFolder(APP_PATH, "Temp");
+        CRASH_PATH = ToolUtils.createFolder(APP_PATH, "Crash");
+        LOG_PATH = ToolUtils.createFolder(APP_PATH, "Log");
     }
 
     private CachePath() {
