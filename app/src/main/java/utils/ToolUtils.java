@@ -2,10 +2,16 @@ package utils;
 
 import android.os.Environment;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.util.Vector;
 
 public class ToolUtils {
     private ToolUtils() {
@@ -105,6 +111,86 @@ public class ToolUtils {
             fos.close();
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+    public static void writeToFile(String path, String fileName, byte[] inputData){
+        writeToFile(path, fileName,inputData,inputData.length,false);
+    }
+
+
+    //读取文件
+    public static byte[] readFile(String filePath){
+        File file = new File(filePath);
+        if(!file.exists()){
+            return null;
+        }
+        byte[] buffer = null;
+        try {
+            RandomAccessFile af = new RandomAccessFile(file.getAbsoluteFile(), "r");
+            buffer = new byte[(int) file.length()];
+            //读取整个文件放在buffer字节数组中
+            af.readFully(buffer);
+            af.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+        return buffer;
+    }
+
+
+    /**
+     * 获取指定目录下文件
+     */
+    public static Vector<File> getUnderFiles(String folderPath) {
+        File directory = new File(folderPath);
+
+        Vector<File> fileList = new Vector<>();
+        if (directory.exists() && directory.isDirectory()) {
+            File[] fileArr = directory.listFiles();
+            for (int i = 0; i < fileArr.length; ++i) {
+                File fileOne = fileArr[i];
+                if (fileOne.isFile()) {
+                    fileList.add(fileOne);
+                }
+            }
+        }
+
+        return fileList;
+    }
+
+
+    /**
+     * 合并文件
+     *
+     * @param outFile 输出路径,含文件名
+     * @param files   需要合并的文件路径 可是File[]，也可是String[]
+     */
+    public static final int BUFSIZE = 1024 * 8;
+
+    public static void mergeFiles(String outFile, File[] files) {
+        FileChannel outChannel = null;
+        try {
+            outChannel = new FileOutputStream(outFile).getChannel();
+            for (File f : files) {
+                FileChannel fc = new FileInputStream(f).getChannel();
+                ByteBuffer bb = ByteBuffer.allocate(BUFSIZE);
+                while (fc.read(bb) != -1) {
+                    bb.flip();
+                    outChannel.write(bb);
+                    bb.clear();
+                }
+                fc.close();
+            }
+        } catch (IOException ioe) {
+            ioe.printStackTrace();
+        } finally {
+            try {
+                if (outChannel != null) {
+                    outChannel.close();
+                }
+            } catch (IOException ignore) {
+            }
         }
     }
 }

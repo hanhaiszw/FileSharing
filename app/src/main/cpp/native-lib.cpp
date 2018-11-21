@@ -51,26 +51,33 @@ void gf_uninit();
 
 //1、初始化有限域
 JNIEXPORT void JNICALL
-        Java_nc_NCUtils_InitGalois(JNIEnv *env, jobject instance);
+Java_nc_NCUtils_InitGalois(JNIEnv *env, jobject instance);
 //2、释放有限域
 JNIEXPORT void JNICALL
-        Java_nc_NCUtils_UninitGalois(JNIEnv *env, jobject instance);
+Java_nc_NCUtils_UninitGalois(JNIEnv *env, jobject instance);
 
 //3、矩阵相乘
 JNIEXPORT jbyteArray JNICALL
-        Java_nc_NCUtils_Multiply(JNIEnv *env, jobject instance,
-                                 jbyteArray matrix1, jint row1, jint col1,
-                                 jbyteArray matrix2, jint row2, jint col2);
+Java_nc_NCUtils_Multiply(JNIEnv *env, jobject instance,
+                         jbyteArray matrix1, jint row1, jint col1,
+                         jbyteArray matrix2, jint row2, jint col2);
+
+//优化有限域相乘的方法  存结果的数组空间由java代码传入
+JNIEXPORT void JNICALL
+Java_nc_NCUtils_Multiply2(JNIEnv *env, jobject instance,
+                          jbyteArray matrix1, jint row1, jint col1,
+                          jbyteArray matrix2, jint row2, jint col2,
+                          jbyteArray ret);
 
 //4、矩阵求逆
 //先是用到了求矩阵的秩，满秩则继续求逆，不满秩则返回NULL
 JNIEXPORT jbyteArray JNICALL
-        Java_nc_NCUtils_InverseMatrix(JNIEnv *env, jobject thiz,
-                                      jbyteArray arrayData, jint nK);
+Java_nc_NCUtils_InverseMatrix(JNIEnv *env, jobject thiz,
+                              jbyteArray arrayData, jint nK);
 //5、求秩
 JNIEXPORT jint JNICALL
-        Java_nc_NCUtils_GetRank(JNIEnv *env, jobject instance, jbyteArray matrix, jint nRow,
-                                jint nCol);
+Java_nc_NCUtils_GetRank(JNIEnv *env, jobject instance, jbyteArray matrix, jint nRow,
+                        jint nCol);
 
 //以下方法jni外面不可访问
 //乘法
@@ -100,6 +107,10 @@ JNIEXPORT jbyteArray JNICALL
 Java_nc_NCUtils_Multiply(JNIEnv *env, jobject instance,
                          jbyteArray matrix1, jint row1, jint col1,
                          jbyteArray matrix2, jint row2, jint col2) {
+    if (col1 != row2) {
+        return nullptr;
+    }
+
     //gs_jvm->AttachCurrentThread(&env, NULL);
     //矩阵1
     jbyte *olddata1 = (jbyte *) env->GetByteArrayElements(matrix1, 0);
@@ -138,6 +149,53 @@ Java_nc_NCUtils_Multiply(JNIEnv *env, jobject instance,
 
     //gs_jvm->DetachCurrentThread(); //使用完成后
     return jarrResult;
+}
+
+//矩阵相乘
+JNIEXPORT void JNICALL
+Java_nc_NCUtils_Multiply2(JNIEnv *env, jobject instance,
+                          jbyteArray matrix1, jint row1, jint col1,
+                          jbyteArray matrix2, jint row2, jint col2,
+                          jbyteArray ret) {
+    if (col1 != row2) {
+        return;
+    }
+
+    //gs_jvm->AttachCurrentThread(&env, NULL);
+    //矩阵1
+    jbyte *olddata1 = (jbyte *) env->GetByteArrayElements(matrix1, 0);
+    jsize oldsize1 = env->GetArrayLength(matrix1);
+    unsigned char *pData1 = (unsigned char *) olddata1;
+
+    //矩阵2
+    jbyte *olddata2 = (jbyte *) env->GetByteArrayElements(matrix2, 0);
+    jsize oldsize2 = env->GetArrayLength(matrix2);
+    unsigned char *pData2 = (unsigned char *) olddata2;
+
+    jbyte *olddata3 = (jbyte *) env->GetByteArrayElements(ret, 0);
+    // unsigned char pResult[row1 * col2];
+    unsigned char *pResult = (unsigned char *) olddata3;
+
+    //gf_init(8, 0x00000187);
+    //相乘
+    unsigned char temp = 0;
+    for (int i = 0; i < row1; ++i) {
+        for (int j = 0; j < col2; ++j) {
+            temp = 0;
+            for (int k = 0; k < col1; ++k) {
+                temp = gf_add(temp, gf_mul(pData1[i * col1 + k], pData2[k * col2 + j]));
+            }
+            pResult[i * col2 + j] = (jbyte) temp;
+        }
+    }
+    //gf_uninit();
+    //转化数组
+
+    env->ReleaseByteArrayElements(matrix1, olddata1, 0);
+    env->ReleaseByteArrayElements(matrix2, olddata2, 0);
+    env->ReleaseByteArrayElements(ret, olddata3, 0);
+    //gs_jvm->DetachCurrentThread(); //使用完成后
+    //return;
 }
 
 //矩阵求逆
@@ -181,8 +239,7 @@ Java_nc_NCUtils_InverseMatrix(JNIEnv *env, jobject thiz,
         for (int j = 0; j < k; j++) {
             if (i == j) {
                 IM[i][j] = 1;
-            }
-            else {
+            } else {
                 IM[i][j] = 0;
             }
         }

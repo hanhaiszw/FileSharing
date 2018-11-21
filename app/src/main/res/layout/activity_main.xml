@@ -22,14 +22,21 @@
     <Button
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Test"
-        android:id="@+id/btn_test"
+        android:text="打开wifi"
+        android:id="@+id/btn_openWifi"
         />
     <Button
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="打开热点"
         android:id="@+id/btn_openAP"
+        />
+
+    <Button
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Test"
+        android:id="@+id/btn_test"
         />
 
 </LinearLayout>

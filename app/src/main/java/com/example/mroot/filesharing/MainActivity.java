@@ -6,8 +6,10 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.provider.Settings;
 import android.support.v7.app.AppCompatActivity;
 import android.text.InputType;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
@@ -27,13 +29,14 @@ import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
 import cache.EncodeFile;
+import connect.ConnectConstant;
+import connect.MyClientSocket;
+import connect.MyServerSocket;
 import data.CachePath;
 import data.MsgType;
 import nc.NCUtils;
 import utils.MyThreadPool;
-import utils.ToolUtils;
 import wifi.WifiAPControl;
-
 
 
 public class MainActivity extends AppCompatActivity {
@@ -44,7 +47,10 @@ public class MainActivity extends AppCompatActivity {
     private int REQUESTCODE_FROM_ACTIVITY = 1000;
     private static Context context;
 
-    WifiAPControl wifiAPControl;
+    private WifiAPControl wifiAPControl;
+
+    private MyServerSocket myServerSocket;
+    private MyClientSocket myClientSocket;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,6 +71,8 @@ public class MainActivity extends AppCompatActivity {
 
 
         wifiAPControl = new WifiAPControl(this);
+        myServerSocket = new MyServerSocket();
+        myClientSocket = new MyClientSocket();
     }
 
 
@@ -78,16 +86,29 @@ public class MainActivity extends AppCompatActivity {
                 .start();
     }
 
-    @OnClick(R.id.btn_test)
+    @OnClick(R.id.btn_openWifi)
     public void test() {
-        //wifiAPControl.openWifi();
-        String s = "abcdefghijklmnopqrstuvwxyz";
-        ToolUtils.writeToFile(CachePath.APP_PATH,"test.txt",s.getBytes(),s.getBytes().length,false);
+        wifiAPControl.openWifi();
+
+
+    }
+
+    @OnClick(R.id.btn_test)
+    public void test1() {
+//        MyThreadPool.execute(() -> {
+//            myClientSocket.connect(ConnectConstant.SERVER_IP,ConnectConstant.SERVER_PORT);
+//            myClientSocket.sendFile(new File(CachePath.APP_PATH + File.separator+"My Heart Will Go On.mp4"));
+//        });
+        byte[] a = {112, 34, 56, (byte) 234};
+        byte[] b = {113, 23, 45, 89};
+        byte[] ret = NCUtils.mul(a, b);
     }
 
     @OnClick(R.id.btn_openAP)
     public void openAP() {
         wifiAPControl.openAP();
+        myServerSocket.openServer(ConnectConstant.SERVER_PORT);
+
     }
 
     //处理各个线程发来的消息
@@ -120,12 +141,17 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(context, filePath, Toast.LENGTH_SHORT).show();
                 File file = new File(filePath);
 
-                //初始化待发送文件
-                MyThreadPool.execute(() -> {
-                    EncodeFile encodeFile = EncodeFile.getSingleton();
-                    encodeFile.init(file,4);
-                });
+                for (int i = 0; i < 10; i++) {
+                    //初始化待发送文件
+                    MyThreadPool.execute(() -> {
+                        //EncodeFile encodeFile = EncodeFile.getSingleton();
 
+                        EncodeFile encodeFile = new EncodeFile(file, 6);
+                        encodeFile.recover();
+
+                    });
+                }
+                Log.d("hanhai", "10遍循环结束");
             }
         }
     }

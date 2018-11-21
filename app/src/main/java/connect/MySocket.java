@@ -1,9 +1,11 @@
 package connect;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.Socket;
@@ -27,7 +29,7 @@ public class MySocket {
         init();
     }
 
-    public void close() throws IOException{
+    public void close() throws IOException {
         socket.close();
     }
 
@@ -51,7 +53,7 @@ public class MySocket {
                 byte[] data = new byte[4096];
                 while (true) {
                     if (socket.isConnected() && !socket.isClosed()) {
-                        receiveFile(dis,data);
+                        receiveFile(dis, data);
                         //String msg = dis.readUTF();
                         //System.out.println(msg);
                     } else {
@@ -83,7 +85,7 @@ public class MySocket {
             dis.readFully(data, 0, readBytes);
             //存入文件
             //
-            bos.write(data,0, readBytes);
+            bos.write(data, 0, readBytes);
             readLen -= readBytes;
         }
 
@@ -94,6 +96,26 @@ public class MySocket {
         socketMsgParse.parse(this, file);
     }
 
+
+    public void sendFile(File file) {
+        try {
+            DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+            dos.writeUTF(file.getName());
+            dos.writeInt((int) file.length());
+
+            BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file));
+            byte[] data = new byte[4096];
+            int len;
+            while ((len = bis.read(data)) != -1) {
+                dos.write(data, 0, len);
+            }
+            bis.close();
+
+            dos.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     public void sendMsg(String msg) {
         try {

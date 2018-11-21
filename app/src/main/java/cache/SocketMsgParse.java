@@ -13,9 +13,7 @@ public class SocketMsgParse {
 
     }
 
-    public void parse(MySocket mySocket,File file){
+    public void parse(MySocket mySocket, File file){
 
     }
-
-
 }

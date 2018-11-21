@@ -1,5 +1,6 @@
 package connect;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
 
@@ -25,6 +26,12 @@ public class MyClientSocket {
     public void sendMsg(String msg) {
         if (mySocket != null) {
             mySocket.sendMsg(msg);
+        }
+    }
+
+    public void sendFile(File file) {
+        if (mySocket != null) {
+            mySocket.sendFile(file);
         }
     }
 }

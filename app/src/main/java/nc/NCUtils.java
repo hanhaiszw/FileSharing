@@ -1,6 +1,7 @@
 package nc;
 
 import java.util.Random;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Created by mroot on 2018/4/7.
@@ -15,11 +16,31 @@ public class NCUtils {
     }
 
 
-    private NCUtils() {}
+    private NCUtils() {
+    }
 
     public static byte[] mul(byte[] a, byte[] b) {
-        byte[] c = Multiply(a, 2, 2, b, 2, 2);
-        return c;
+        byte[] ret = new byte[2 * 2];
+        Multiply2(a, 2, 2, b, 2, 2, ret);
+        return ret;
+    }
+
+
+    private static byte[] multiply(byte[] matrix1, int row1, int col1, byte[] matrix2, int row2, int col2) {
+        if (col1 != row2) {
+            return null;
+        }
+        int len = row1 * col2;
+        byte[] bytes = BufferControl.getBuffer(len);
+
+        Multiply2(matrix1, row1, col1, matrix2, row2, col2, bytes);
+        //byte[] bytes=Multiply(matrix1, row1, col1, matrix2, row2, col2);
+        return bytes;
+    }
+
+    //释放缓冲区
+    public static void releaseBuffer(byte[] bytes){
+        BufferControl.releaseBuffer(bytes);
     }
 
 
@@ -39,7 +60,7 @@ public class NCUtils {
         //为了避免矩阵的来回复制，
         //再编码没有取出首字节K值，
         //再编码矩阵与编码数据相乘后，在把再编码结果首位置为K值
-        byte[] result = Multiply(randomMatrix, 1, row, encodeData, row, col);
+        byte[] result = multiply(randomMatrix, 1, row, encodeData, row, col);
         result[0] = encodeData[0];
         return result;
     }
@@ -52,7 +73,7 @@ public class NCUtils {
      * @param col
      * @return
      */
-    public static byte[] decode(byte[] encodeData, int row, int col) {
+    public static byte[] decode(byte[] encodeData, int row, int col) throws Exception{
         int K = encodeData[0];
         if (row < K) {
             //数据不足，解码失败
@@ -69,18 +90,12 @@ public class NCUtils {
         byte[] invMatrix = InverseMatrix(coefMatrix, K);
         //为编码数据来回在数组中复制，这里没有取出encodeData 1+K之后的字节
         //而是对整个encodeData数据进行相乘，然后再取出原始数据
-        //解码
-        byte[] result = Multiply(invMatrix, K, K, encodeData, K, col);
+        //解码 为了避免数组申请过大，这里把最终的结果还存入原来的数组中
 
-        //取出原数据
-        int row0 = K;
-        int col0 = col - 1 - K;
-        byte[] originData = new byte[row0 * col0];
-        for (int i = 0; i < row0; i++) {
-            //native方法  效率高
-            System.arraycopy(result, i * col + 1 + K, originData, i * col0, col0);
-        }
-        return originData;
+        //byte[] result = Multiply(invMatrix, K, K, encodeData, K, col);
+        //noinspection UnusedAssignment
+        byte[] result = multiply(invMatrix, K, K, encodeData, K, col);
+        return result;
     }
 
 
@@ -110,6 +125,9 @@ public class NCUtils {
 
     //矩阵相乘
     private static native byte[] Multiply(byte[] matrix1, int row1, int col1, byte[] matrix2, int row2, int col2);
+
+    //矩阵相乘
+    private static native void Multiply2(byte[] matrix1, int row1, int col1, byte[] matrix2, int row2, int col2, byte[] ret);
 
     //矩阵求逆
     private static native byte[] InverseMatrix(byte[] arrayData, int nK);
