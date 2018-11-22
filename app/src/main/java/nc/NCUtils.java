@@ -1,7 +1,6 @@
 package nc;
 
 import java.util.Random;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Created by mroot on 2018/4/7.
@@ -25,34 +24,16 @@ public class NCUtils {
         return ret;
     }
 
-
-    private static byte[] multiply(byte[] matrix1, int row1, int col1, byte[] matrix2, int row2, int col2) {
-        if (col1 != row2) {
-            return null;
-        }
-        int len = row1 * col2;
-        byte[] bytes = BufferControl.getBuffer(len);
-
-        Multiply2(matrix1, row1, col1, matrix2, row2, col2, bytes);
-        //byte[] bytes=Multiply(matrix1, row1, col1, matrix2, row2, col2);
-        return bytes;
-    }
-
-    //释放缓冲区
-    public static void releaseBuffer(byte[] bytes){
-        BufferControl.releaseBuffer(bytes);
-    }
-
-
     /**
      * 只生成一个再编码文件
      *
      * @param encodeData
      * @param row
      * @param col
+     * @param result 存放结果的数组
      * @return
      */
-    public static byte[] reencode(byte[] encodeData, int row, int col) {
+    public static byte[] reencode(byte[] encodeData, int row, int col, byte[] result) {
         //1*row 随机矩阵  与  row * col的数据矩阵相乘
         byte[] randomMatrix = new byte[row];
         Random random = new Random();
@@ -60,7 +41,7 @@ public class NCUtils {
         //为了避免矩阵的来回复制，
         //再编码没有取出首字节K值，
         //再编码矩阵与编码数据相乘后，在把再编码结果首位置为K值
-        byte[] result = multiply(randomMatrix, 1, row, encodeData, row, col);
+        Multiply2(randomMatrix, 1, row, encodeData, row, col,result);
         result[0] = encodeData[0];
         return result;
     }
@@ -71,13 +52,14 @@ public class NCUtils {
      * @param encodeData
      * @param row
      * @param col
+     * @param result 存放结果的数组
      * @return
      */
-    public static byte[] decode(byte[] encodeData, int row, int col) throws Exception{
+    public static void decode(byte[] encodeData, int row, int col, byte[] result){
         int K = encodeData[0];
         if (row < K) {
             //数据不足，解码失败
-            return null;
+            return;
         }
         //取出编码矩阵
         byte[] coefMatrix = new byte[K * K];
@@ -90,12 +72,10 @@ public class NCUtils {
         byte[] invMatrix = InverseMatrix(coefMatrix, K);
         //为编码数据来回在数组中复制，这里没有取出encodeData 1+K之后的字节
         //而是对整个encodeData数据进行相乘，然后再取出原始数据
-        //解码 为了避免数组申请过大，这里把最终的结果还存入原来的数组中
 
+        //解码
         //byte[] result = Multiply(invMatrix, K, K, encodeData, K, col);
-        //noinspection UnusedAssignment
-        byte[] result = multiply(invMatrix, K, K, encodeData, K, col);
-        return result;
+        Multiply2(invMatrix, K, K, encodeData, K, col, result);
     }
 
 

@@ -113,10 +113,10 @@ class PartFile {
     public File recoverPartFile() {
         //写入文件
         File orgFile = new File(partFilePath, partNo + ".org");
-        if(orgFile.exists()){
+        if (orgFile.exists()) {
             return orgFile;
         }
-        orgFile=ToolUtils.createFile(partFilePath, partNo + ".org");
+        orgFile = ToolUtils.createFile(partFilePath, partNo + ".org");
 
         Vector<File> files = ToolUtils.getUnderFiles(pieceFilePath);
         if (files.size() < K) {
@@ -126,7 +126,7 @@ class PartFile {
         byte[] result = null;
         byte[] buffer = null;
         try {
-            buffer = MyByteBuffer.getBuffer();
+            buffer = MyByteBuffer.getBuffer(pieceFileLen * K);
             //byte[] buffer = new byte[len];
             for (int i = 0; i < K; i++) {
                 File file = files.get(i);
@@ -136,7 +136,8 @@ class PartFile {
                 af.close();
             }
             //解码   带有K + 单位矩阵 的数据
-            result = NCUtils.decode(buffer, K, pieceFileLen);
+            result = MyByteBuffer.getBuffer(pieceFileLen * K);
+            NCUtils.decode(buffer, K, pieceFileLen,result);
 
             RandomAccessFile af = new RandomAccessFile(orgFile.getAbsoluteFile(), "rw");
             int realLen = partFileLen;
@@ -157,7 +158,7 @@ class PartFile {
             return null;
         } finally {
             MyByteBuffer.releaseBuffer(buffer);
-            NCUtils.releaseBuffer(result);
+            MyByteBuffer.releaseBuffer(result);
         }
 
 

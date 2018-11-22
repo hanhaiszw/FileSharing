@@ -86,7 +86,7 @@ public class MainActivity extends Activity implements IProxy, SearchView.OnQuery
         Intent intent = getIntent();
         String path = intent.getStringExtra("extra_path");
         rootPath = path;
-        updateData(rootPath);
+        //updateData(rootPath);
 
 
         Utils.KEY = "";//初始化
@@ -108,6 +108,8 @@ public class MainActivity extends Activity implements IProxy, SearchView.OnQuery
 
         layout.setEnabled(false);
         //updateData();// 子线程--拿数据
+        updateData(rootPath);
+
     }
 
 
@@ -131,6 +133,8 @@ public class MainActivity extends Activity implements IProxy, SearchView.OnQuery
         adapter.notifyDataSetChanged();// 刷新视图
         tv_path.setText(submitPath(path));
 
+        //hanhai添加   为了实现按时间逆序排序
+        clickImg(iv_asc);
     }
 
     /**
@@ -419,7 +423,9 @@ public class MainActivity extends Activity implements IProxy, SearchView.OnQuery
     }
 
 
-    int asc = 1; // 可以帮助在正序和倒序之间进行切换
+    //hanhai 1 为正序  -1为逆序
+    //hanhai 修改 1 为 -1  为了实现按时间逆序排序
+    int asc = -1; // 可以帮助在正序和倒序之间进行切换
     // 日期比较器
     Comparator<FileInfo> dateComparator = new Comparator<FileInfo>() {
         @Override
@@ -512,7 +518,7 @@ public class MainActivity extends Activity implements IProxy, SearchView.OnQuery
                 handler.sendMessage(msg);// msg.what=1
             }
 
-            ;
+
         }.start();
         // (2) --
         showProgressDialog();// 显示进度框
@@ -618,7 +624,7 @@ public class MainActivity extends Activity implements IProxy, SearchView.OnQuery
 
         update_sort();
 //切换正负倒序
-        asc *= -1;
+      //  asc *= -1;
 
 
     }

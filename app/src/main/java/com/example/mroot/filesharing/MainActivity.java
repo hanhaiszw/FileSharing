@@ -141,17 +141,21 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(context, filePath, Toast.LENGTH_SHORT).show();
                 File file = new File(filePath);
 
-                for (int i = 0; i < 10; i++) {
-                    //初始化待发送文件
-                    MyThreadPool.execute(() -> {
-                        //EncodeFile encodeFile = EncodeFile.getSingleton();
 
+                MyThreadPool.execute(() -> {
+                    //EncodeFile encodeFile = EncodeFile.getSingleton();
+                    for (int i = 0; i < 10; i++) {
+                        //初始化待发送文件
+                        int index = i + 1;
+
+                        Log.d("hanhai", "第" + index + "次预处理开始");
                         EncodeFile encodeFile = new EncodeFile(file, 6);
                         encodeFile.recover();
+                        Log.d("hanhai", "第" + index + "次执行结束");
+                    }
 
-                    });
-                }
-                Log.d("hanhai", "10遍循环结束");
+                });
+
             }
         }
     }
