@@ -2,7 +2,6 @@ package utils;
 
 import android.os.Environment;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -54,6 +53,9 @@ public class ToolUtils {
      */
     public static String createFolder(String path, String folderName) {
         String folderPath = path + File.separator + folderName;
+        return createFolder(folderPath);
+    }
+    public static String createFolder(String folderPath) {
         File tempFolder = new File(folderPath);
         if (!tempFolder.exists()) {
             //若不存在，则创建
@@ -70,7 +72,10 @@ public class ToolUtils {
     }
 
     public static File createFile(String path, String fileName){
-        File myFile = new File(path + File.separator + fileName);
+        return createFile(path+File.separator+fileName);
+    }
+    public static File createFile(String filePath){
+        File myFile = new File(filePath);
         if(!myFile.exists()){
             try {
                 myFile.createNewFile();
@@ -80,6 +85,8 @@ public class ToolUtils {
         }
         return myFile;
     }
+
+
     /**
      *
      * @param path

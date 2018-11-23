@@ -3,6 +3,7 @@ package com.example.mroot.filesharing;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -24,6 +25,7 @@ import com.yanzhenjie.permission.Permission;
 
 import java.io.File;
 import java.util.List;
+import java.util.concurrent.locks.Lock;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -52,6 +54,10 @@ public class MainActivity extends AppCompatActivity {
     private MyServerSocket myServerSocket;
     private MyClientSocket myClientSocket;
 
+    //网络编码中的GenerationSize
+    private int K;
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -73,6 +79,18 @@ public class MainActivity extends AppCompatActivity {
         wifiAPControl = new WifiAPControl(this);
         myServerSocket = new MyServerSocket();
         myClientSocket = new MyClientSocket();
+
+        init();
+    }
+
+    private void init() {
+        SharedPreferences pref = getSharedPreferences("data", MODE_PRIVATE);
+        K = pref.getInt("K", 4);
+        Log.e("hanhai", K + "");
+        String xmlFilePath = pref.getString("xmlFilePath", "");
+        Log.e("hanhai", xmlFilePath);
+
+        EncodeFile.getSingleton(xmlFilePath);
     }
 
 
@@ -89,7 +107,6 @@ public class MainActivity extends AppCompatActivity {
     @OnClick(R.id.btn_openWifi)
     public void test() {
         wifiAPControl.openWifi();
-
 
     }
 
@@ -141,19 +158,20 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(context, filePath, Toast.LENGTH_SHORT).show();
                 File file = new File(filePath);
 
+                //EncodeFile encodeFile = EncodeFile.xml2obj(file.getAbsolutePath());
 
                 MyThreadPool.execute(() -> {
                     //EncodeFile encodeFile = EncodeFile.getSingleton();
-                    for (int i = 0; i < 10; i++) {
-                        //初始化待发送文件
-                        int index = i + 1;
-
-                        Log.d("hanhai", "第" + index + "次预处理开始");
-                        EncodeFile encodeFile = new EncodeFile(file, 6);
-                        encodeFile.recover();
-                        Log.d("hanhai", "第" + index + "次执行结束");
-                    }
-
+//                    for (int i = 0; i < 10; i++) {
+//                        //初始化待发送文件
+//                        int index = i + 1;
+//
+//                        Log.d("hanhai", "第" + index + "次预处理开始");
+                    Log.d("hanhai","文件预处理开始");
+                    EncodeFile encodeFile = EncodeFile.getSingleton(file, 6);
+                    encodeFile.recover();
+//                        Log.d("hanhai", "第" + index + "次执行结束");
+//                    }
                 });
 
             }
@@ -167,8 +185,18 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(getApplicationContext(), "再按一次退出程序", Toast.LENGTH_SHORT).show();
             exitTime = System.currentTimeMillis();
         } else {
+            //注意：写在finish后的话，存值失败
+            //使用 editor.apply()失败  改用editor.commit()保存成功
+            //apply异步   commit同步
+            String xmlFilePath = EncodeFile.getSingleton().getXmlFilePath();
+            SharedPreferences.Editor editor = getSharedPreferences("data", MODE_PRIVATE).edit();
+            editor.putString("xmlFilePath", xmlFilePath);
+            Log.e("hanhai",xmlFilePath);
+            editor.commit();
+
             finish();
             NCUtils.UninitGalois();
+            MyThreadPool.shutdownNow();
             //不会调用周期函数，如onDestroy()
             System.exit(0);
         }
@@ -215,9 +243,18 @@ public class MainActivity extends AppCompatActivity {
                 new MaterialDialog.Builder(this)
                         .title("设置K值")
                         .inputType(InputType.TYPE_CLASS_NUMBER)
-                        .input("6", null, (dialog, input) -> {
+                        .input(K + "", null, (dialog, input) -> {
                             int k = Integer.parseInt(input.toString());
-                            Toast.makeText(MainActivity.this, k + "", Toast.LENGTH_SHORT).show();
+                            if (k < 2 || k > 10) {
+                                Toast.makeText(MainActivity.this, "K值在2到10之间", Toast.LENGTH_SHORT).show();
+                            } else {
+                                if (k != K) {
+                                    K = k;
+                                    SharedPreferences.Editor editor = getSharedPreferences("data", MODE_PRIVATE).edit();
+                                    editor.putInt("K", K);
+                                    editor.commit();
+                                }
+                            }
                         })
                         .positiveText("确认")
                         .negativeText("取消")

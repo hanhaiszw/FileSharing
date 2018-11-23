@@ -14,6 +14,11 @@ public class NCUtils {
         InitGalois();
     }
 
+    //用于实现反射  根据方法名调用方法
+    public final static String CLASS_NAME = "nc.NCUtils";
+    public final static String DECODE_METHOD_NAME = "decode";
+    public final static String REENCODE_METHOD_NAME = "reencode";
+
 
     private NCUtils() {
     }
@@ -30,7 +35,7 @@ public class NCUtils {
      * @param encodeData
      * @param row
      * @param col
-     * @param result 存放结果的数组
+     * @param result     存放结果的数组
      * @return
      */
     public static byte[] reencode(byte[] encodeData, int row, int col, byte[] result) {
@@ -41,7 +46,7 @@ public class NCUtils {
         //为了避免矩阵的来回复制，
         //再编码没有取出首字节K值，
         //再编码矩阵与编码数据相乘后，在把再编码结果首位置为K值
-        Multiply2(randomMatrix, 1, row, encodeData, row, col,result);
+        Multiply2(randomMatrix, 1, row, encodeData, row, col, result);
         result[0] = encodeData[0];
         return result;
     }
@@ -52,10 +57,10 @@ public class NCUtils {
      * @param encodeData
      * @param row
      * @param col
-     * @param result 存放结果的数组
+     * @param result     存放结果的数组
      * @return
      */
-    public static void decode(byte[] encodeData, int row, int col, byte[] result){
+    public static void decode(byte[] encodeData, int row, int col, byte[] result) {
         int K = encodeData[0];
         if (row < K) {
             //数据不足，解码失败
