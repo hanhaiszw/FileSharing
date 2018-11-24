@@ -2,12 +2,11 @@ package com.example.mroot.filesharing;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.provider.Settings;
 import android.support.v7.app.AppCompatActivity;
 import android.text.InputType;
 import android.util.Log;
@@ -16,6 +15,7 @@ import android.view.MenuItem;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.afollestad.materialdialogs.DialogAction;
 import com.afollestad.materialdialogs.MaterialDialog;
 import com.leon.lfilepickerlibrary.LFilePicker;
 import com.mauiie.aech.AECHConfiguration;
@@ -25,7 +25,6 @@ import com.yanzhenjie.permission.Permission;
 
 import java.io.File;
 import java.util.List;
-import java.util.concurrent.locks.Lock;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -36,6 +35,7 @@ import connect.MyClientSocket;
 import connect.MyServerSocket;
 import data.CachePath;
 import data.MsgType;
+import data.RunMode;
 import nc.NCUtils;
 import utils.MyThreadPool;
 import wifi.WifiAPControl;
@@ -55,8 +55,9 @@ public class MainActivity extends AppCompatActivity {
     private MyClientSocket myClientSocket;
 
     //网络编码中的GenerationSize
-    private int K;
+    // private int K;
 
+    private static RunMode runMode;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,22 +76,19 @@ public class MainActivity extends AppCompatActivity {
                         .setSaveToLocal(true).build()   //开启存储在本地功能
         );
 
-
-        wifiAPControl = new WifiAPControl(this);
-        myServerSocket = new MyServerSocket();
-        myClientSocket = new MyClientSocket();
-
         init();
     }
 
     private void init() {
-        SharedPreferences pref = getSharedPreferences("data", MODE_PRIVATE);
-        K = pref.getInt("K", 4);
-        Log.e("hanhai", K + "");
-        String xmlFilePath = pref.getString("xmlFilePath", "");
-        Log.e("hanhai", xmlFilePath);
+        wifiAPControl = new WifiAPControl(this);
+        myServerSocket = new MyServerSocket();
+        myClientSocket = new MyClientSocket();
+        runMode = new RunMode();
+        //读取上一次的配置数据
+        runMode.initRunMode(context);
 
-        EncodeFile.getSingleton(xmlFilePath);
+        EncodeFile.updateSingleton(runMode.lastXMLFilePath);
+        setTitle(runMode.runModeString);
     }
 
 
@@ -99,7 +97,7 @@ public class MainActivity extends AppCompatActivity {
         new LFilePicker()
                 .withActivity(MainActivity.this)
                 .withRequestCode(REQUESTCODE_FROM_ACTIVITY)
-                .withStartPath("/storage/emulated/0")
+                .withStartPath(runMode.selectStartPath)
                 .withMutilyMode(false)
                 .start();
     }
@@ -138,6 +136,7 @@ public class MainActivity extends AppCompatActivity {
                 case SHOW_MSG:
                     Toast.makeText(context, msg.obj.toString(), Toast.LENGTH_SHORT).show();
                     break;
+
                 default:
                     break;
             }
@@ -155,27 +154,50 @@ public class MainActivity extends AppCompatActivity {
                 List<String> list = data.getStringArrayListExtra("paths");
                 //这里用的单选
                 String filePath = list.get(0);
-                Toast.makeText(context, filePath, Toast.LENGTH_SHORT).show();
+                //Toast.makeText(context, filePath, Toast.LENGTH_SHORT).show();
+                Log.e("hanhai", filePath);
                 File file = new File(filePath);
+                solveSelectFile(file);
+            }
+        }
+    }
 
-                //EncodeFile encodeFile = EncodeFile.xml2obj(file.getAbsolutePath());
-
-                MyThreadPool.execute(() -> {
-                    //EncodeFile encodeFile = EncodeFile.getSingleton();
+    private void solveSelectFile(File file) {
+        runMode.selectStartPath = file.getParent();
+        new MaterialDialog.Builder(context)
+                .title("请选择运行模式")
+                .positiveText("确认")
+                .items(new String[]{RunMode.OD_MODE, RunMode.RS_MODE, RunMode.NC_MODE})
+                .itemsCallbackSingleChoice(-1, (dialog, view, which, text) -> {
+                    Log.e("hanhai", text.toString());
+                    runMode.runModeString = text.toString();
+                    //更新标题
+                    setTitle(text);
+                    return true;
+                })
+                .dismissListener(dialog -> {
+                    //开始处理文件
+                    Toast.makeText(MainActivity.this, "当前运行模式" +
+                            runMode.runModeString, Toast.LENGTH_SHORT).show();
+                    MyThreadPool.execute(() -> {
+                        Log.d("hanhai", "文件预处理开始");
+                        EncodeFile.updateSingleton(file, runMode.K, runMode.runModeString);
+                        //EncodeFile encodeFile = EncodeFile.getSingleton();
 //                    for (int i = 0; i < 10; i++) {
 //                        //初始化待发送文件
 //                        int index = i + 1;
 //
 //                        Log.d("hanhai", "第" + index + "次预处理开始");
-                    Log.d("hanhai","文件预处理开始");
-                    EncodeFile encodeFile = EncodeFile.getSingleton(file, 6);
-                    encodeFile.recover();
+
+
+                        //Log.d("hanhai", "文件预处理开始");
+                        //EncodeFile.updateSingleton(file, runMode.K, runMode.runModeString);
+                        //encodeFile.recover();
 //                        Log.d("hanhai", "第" + index + "次执行结束");
 //                    }
-                });
-
-            }
-        }
+                    });
+                })
+                .show();
     }
 
 
@@ -186,13 +208,8 @@ public class MainActivity extends AppCompatActivity {
             exitTime = System.currentTimeMillis();
         } else {
             //注意：写在finish后的话，存值失败
-            //使用 editor.apply()失败  改用editor.commit()保存成功
-            //apply异步   commit同步
-            String xmlFilePath = EncodeFile.getSingleton().getXmlFilePath();
-            SharedPreferences.Editor editor = getSharedPreferences("data", MODE_PRIVATE).edit();
-            editor.putString("xmlFilePath", xmlFilePath);
-            Log.e("hanhai",xmlFilePath);
-            editor.commit();
+            runMode.lastXMLFilePath = EncodeFile.getSingleton().getXmlFilePath();
+            runMode.commitRunMode(context);
 
             finish();
             NCUtils.UninitGalois();
@@ -243,16 +260,13 @@ public class MainActivity extends AppCompatActivity {
                 new MaterialDialog.Builder(this)
                         .title("设置K值")
                         .inputType(InputType.TYPE_CLASS_NUMBER)
-                        .input(K + "", null, (dialog, input) -> {
+                        .input(runMode.K + "", null, (dialog, input) -> {
                             int k = Integer.parseInt(input.toString());
                             if (k < 2 || k > 10) {
                                 Toast.makeText(MainActivity.this, "K值在2到10之间", Toast.LENGTH_SHORT).show();
                             } else {
-                                if (k != K) {
-                                    K = k;
-                                    SharedPreferences.Editor editor = getSharedPreferences("data", MODE_PRIVATE).edit();
-                                    editor.putInt("K", K);
-                                    editor.commit();
+                                if (k != runMode.K) {
+                                    runMode.K = k;
                                 }
                             }
                         })

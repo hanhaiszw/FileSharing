@@ -37,6 +37,9 @@ public class EncodeFile {
     //唯一识别码
     private String AndroidId;
 
+    //运行模式
+    private String runModeString;
+
     //文件片的信息
     @XStreamAlias("subfileInfor")
     private Vector<PartFile> partFileVector = new Vector<>();
@@ -47,8 +50,8 @@ public class EncodeFile {
     @XStreamOmitField
     private static EncodeFile encodeFileSingleton = new EncodeFile();
 
-    private EncodeFile(File file, int K) {
-        init(file, K);
+    private EncodeFile(File file, int K, String runModeString) {
+        init(file, K, runModeString);
     }
 
     private EncodeFile() {
@@ -59,31 +62,27 @@ public class EncodeFile {
         return encodeFileSingleton;
     }
 
-    public static EncodeFile getSingleton(File file, int K) {
-        encodeFileSingleton = new EncodeFile(file, K);
-        return encodeFileSingleton;
+    public static void updateSingleton(File file, int K, String runModeString) {
+        encodeFileSingleton = new EncodeFile(file, K, runModeString);
     }
 
-    public static EncodeFile getSingleton(String xmlFilePath) {
+    public static void updateSingleton(String xmlFilePath) {
         File file = new File(xmlFilePath);
         if (file.exists()) {
             encodeFileSingleton = xml2obj(xmlFilePath);
             String className = encodeFileSingleton.partFileVector.get(0).getClass().getName();
             Log.e("hanhai", className);
         }
-
-
-        return encodeFileSingleton;
     }
 
     //根据其他手机的encodeFile查找或生成本机的配置对象
-    public static EncodeFile getSingleton(EncodeFile itsEncodeFile) {
-        return getLocalCache(itsEncodeFile);
+    public static void updateSingleton(EncodeFile itsEncodeFile) {
+        getLocalCache(itsEncodeFile);
     }
 
 
     //对文件进行分片预处理
-    private void init(File file, int K) {
+    private void init(File file, int K, String runModeString) {
         this.AndroidId = ConstantData.ANDROID_ID;
         this.fileName = file.getName();
         this.K = K;
@@ -94,6 +93,9 @@ public class EncodeFile {
         this.partNum = fileLen / partLen + (fileLen % partLen == 0 ? 0 : 1);
         //解码所需要的文件片数
         this.currentPieceNum = partNum * K;
+        //
+        this.runModeString = runModeString;
+
         //每一部分的长度
         for (int i = 1; i <= partNum; i++) {
             int len = partLen;
@@ -101,8 +103,8 @@ public class EncodeFile {
                 len = fileLen - partLen * (partNum - 1);
             }
             int startPos = (i - 1) * partLen;
-            PartFile partFile = new ODPartFile();
-            partFile.initPartFile(folderPath, i, file, startPos, len, K);
+            PartFile partFile = PartFileFactory.createPartFile(runModeString);
+            partFile.initPartFile(folderPath, i, file, startPos, len, K, AndroidId);
             partFile.reencodePartFile();
             partFileVector.add(partFile);
         }
@@ -127,6 +129,7 @@ public class EncodeFile {
                         "partNum",
                         "currentPieceNum",
                         "AndroidId",
+                        "runModeString",
                         "partFileVector",
                         "xmlFileName",
                         "encodeFileSingleton"
@@ -141,7 +144,8 @@ public class EncodeFile {
                         "K",
                         "partFilePath",
                         "pieceFilePath",
-                        "reencodeFilePath"
+                        "reencodeFilePath",
+                        "AndroidId"
                 });
 
         XStream xStream = new XStream(new Sun14ReflectionProvider(new FieldDictionary(sorter)));
@@ -162,9 +166,6 @@ public class EncodeFile {
         ToolUtils.writeToFile(folderPath, xmlFileName, xml.getBytes());
     }
 
-    public String getXmlFilePath() {
-        return folderPath + File.separator + xmlFileName;
-    }
 
     //把xml恢复为对象
     public static EncodeFile xml2obj(String xmlFilePath) {
@@ -199,7 +200,7 @@ public class EncodeFile {
         //为了保持xml文件的简练  partFile类中有些信息没有存入
         //在此恢复
         for (PartFile partFile : encodeFile.partFileVector) {
-            partFile.recoverOmitField(encodeFile.folderPath, encodeFile.K);
+            partFile.recoverOmitField(encodeFile.folderPath, encodeFile.K, encodeFile.AndroidId);
         }
 
         return encodeFile;
@@ -225,6 +226,7 @@ public class EncodeFile {
             newEncodeFile.partNum = encodeFile.partNum;
             newEncodeFile.AndroidId = encodeFile.AndroidId;
             newEncodeFile.K = encodeFile.K;
+            newEncodeFile.runModeString = encodeFile.runModeString;
             newEncodeFile.object2xml();
             encodeFileSingleton = newEncodeFile;
         }
@@ -234,9 +236,9 @@ public class EncodeFile {
     //恢复文件
     public void recover() {
         //如果本机就是文件源，则不执行解码
-//        if (AndroidId.equals(ConstantData.ANDROID_ID)) {
-//            return;
-//        }
+        if (AndroidId.equals(ConstantData.ANDROID_ID)) {
+            return;
+        }
         //片文件数目不足以恢复原文件
         if (currentPieceNum < partNum * K) {
             return;
@@ -254,5 +256,9 @@ public class EncodeFile {
         ToolUtils.mergeFiles(outFilePath, files);
 
         Log.d("hanhai", "恢复数据成功");
+    }
+
+    public String getXmlFilePath() {
+        return folderPath + File.separator + xmlFileName;
     }
 }

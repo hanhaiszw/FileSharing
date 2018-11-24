@@ -43,6 +43,8 @@ abstract class PartFile {
     @XStreamOmitField
     String reencodeFilePath; //用来存储再编码文件
 
+    @XStreamOmitField
+    String AndroidId;
 
     public PartFile() {
     }
@@ -66,19 +68,22 @@ abstract class PartFile {
         this.reencodeFilePath = ToolUtils.createFolder(partFilePath, "reencodeFilePath");
     }
 
-    public void recoverOmitField(String folderPath, int K) {
+    public void recoverOmitField(String folderPath, int K, String AndroidId) {
         this.K = K;
         this.partFilePath = folderPath + File.separator + partNo;
         this.pieceFilePath = partFilePath + File.separator + "pieceFilePath";
         this.reencodeFilePath = partFilePath + File.separator + "reencodeFilePath";
+        this.AndroidId = AndroidId;
     }
 
     //从文件的第几个字节开始读取到第几个字节
-    public void initPartFile(String folderPath, int partNo, File file, int startPos, int len, int K) {
+    public void initPartFile(String folderPath, int partNo, File file, int startPos, int len, int K, String AndroidId) {
         this.partNo = partNo;
         this.pieceFileLen = (len % K == 0 ? len / K : (len / K + 1)) + (1 + K); //记得加上系数矩阵的长度
         this.K = K;
         this.partFileLen = len;
+        this.AndroidId = AndroidId;
+
         createCachePath(folderPath);
         initCoefMatrix();
         try {
