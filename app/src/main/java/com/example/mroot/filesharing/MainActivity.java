@@ -89,6 +89,12 @@ public class MainActivity extends AppCompatActivity {
 
         EncodeFile.updateSingleton(runMode.lastXMLFilePath);
         setTitle(runMode.runModeString);
+
+//        File file = new File(runMode.lastXMLFilePath);
+//        if (!file.exists()) {
+//            Log.e("hanhai", "文件名为 " + file.getName());
+//            Log.e("hanhai", "文件长度为 " + (int) file.length());
+//        }
     }
 
 

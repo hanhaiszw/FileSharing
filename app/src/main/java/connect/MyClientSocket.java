@@ -23,15 +23,15 @@ public class MyClientSocket {
         System.out.println("连接服务器成功");
     }
 
-    public void sendMsg(String msg) {
-        if (mySocket != null) {
-            mySocket.sendMsg(msg);
-        }
-    }
-
-    public void sendFile(File file) {
-        if (mySocket != null) {
-            mySocket.sendFile(file);
-        }
-    }
+//    public void sendMsg(String msg) {
+//        if (mySocket != null) {
+//            mySocket.sendMsg(msg);
+//        }
+//    }
+//
+//    public void sendFile(File file) {
+//        if (mySocket != null) {
+//            mySocket.sendFile(file);
+//        }
+//    }
 }

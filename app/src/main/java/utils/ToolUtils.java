@@ -200,4 +200,46 @@ public class ToolUtils {
             }
         }
     }
+
+
+    /**
+     * copy文件
+     * @param source
+     * @param target
+     */
+    public static void copyFile(File source, File target) {
+        try {
+            FileInputStream inStream = new FileInputStream(source);
+            FileOutputStream outStream = new FileOutputStream(target);
+            FileChannel in = inStream.getChannel();
+            FileChannel out = outStream.getChannel();
+            in.transferTo(0, in.size(), out);
+
+            inStream.close();
+            in.close();
+            outStream.close();
+            out.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    //删除文件或文件夹
+    public static void deleteFile(String filePath){
+        File file = new File(filePath);
+        if (file.exists()) {
+            file.delete();// 删除
+        }
+    }
+    public static void deleteFile(File file){
+        deleteFile(file.getPath());
+    }
+
+    public static void deleteDir(String folderPath){
+        com.example.zpc.file.util.Utils.deleteDir(folderPath);
+    }
+    public static void deleteDir(File folder){
+        deleteDir(folder.getPath());
+    }
 }

@@ -20,8 +20,7 @@ import utils.ToolUtils;
 public class MySocket {
     private Socket socket;
     private SocketMsgParse socketMsgParse;
-    private DataInputStream dis;
-    private byte[] data;
+    //private DataInputStream dis;
 
     public MySocket(Socket socket) {
         this.socket = socket;
@@ -53,9 +52,7 @@ public class MySocket {
                 byte[] data = new byte[4096];
                 while (true) {
                     if (socket.isConnected() && !socket.isClosed()) {
-                        receiveFile(dis, data);
-                        //String msg = dis.readUTF();
-                        //System.out.println(msg);
+                        receiveSocketMsgContent(dis, data);
                     } else {
                         break;
                     }
@@ -63,18 +60,19 @@ public class MySocket {
             } catch (IOException e) {
                 e.printStackTrace();
                 System.out.println("client端socket关闭");
+            } finally {
+                //关闭socket操作
             }
         }
     };
 
-    private void receiveFile(DataInputStream dis, byte[] data) throws IOException {
-        this.dis = dis;
-        this.data = data;
+    private File receiveFile(DataInputStream dis, byte[] data, int fileLen) throws IOException {
+        //String fileName = dis.readUTF();
+        //存入随机文件名字下
+        String randomFileName = ToolUtils.randomString(5);
+        File file = ToolUtils.createFile(CachePath.RECEIVE_TEMP_PATH, randomFileName);
 
-        String fileName = dis.readUTF();
-        File file = ToolUtils.createFile(CachePath.RECEIVE_TEMP_PATH, fileName);
-
-        int fileLen = dis.readInt();
+        //int fileLen = dis.readInt();
         int readLen = fileLen;
         int readBytes;
 
@@ -92,17 +90,38 @@ public class MySocket {
         bos.close();
         fos.close();
 
-        //把文件送给解析类
-        socketMsgParse.parse(this, file);
+        return file;
     }
 
 
+    private void receiveSocketMsgContent(DataInputStream dis, byte[] data) {
+        try {
+            SocketMsgContent socketMsgContent = new SocketMsgContent();
+            socketMsgContent.serveOrClient = dis.readInt();
+            socketMsgContent.code = dis.readInt();
+
+
+            socketMsgContent.partNo = dis.readInt();
+            socketMsgContent.fileLen = dis.readInt();
+            if (socketMsgContent.fileLen != 0) {
+                socketMsgContent.fileName = dis.readUTF();
+                socketMsgContent.file = receiveFile(dis, data, socketMsgContent.fileLen);
+            }
+            socketMsgParse.parse(this, socketMsgContent);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
     public void sendFile(File file) {
+        if (file == null || !file.exists()) {
+            return;
+        }
         try {
             DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
-            dos.writeUTF(file.getName());
-            dos.writeInt((int) file.length());
-
+            //dos.writeUTF(file.getName());
+            //dos.writeInt((int) file.length());
             BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file));
             byte[] data = new byte[4096];
             int len;
@@ -116,6 +135,23 @@ public class MySocket {
             e.printStackTrace();
         }
     }
+
+    public void sendSocketMsgContent(SocketMsgContent socketMsgContent) {
+        try {
+            DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+            dos.writeInt(socketMsgContent.serveOrClient);
+            dos.writeInt(socketMsgContent.code);
+            dos.writeInt(socketMsgContent.partNo);
+            dos.writeInt(socketMsgContent.fileLen);
+            if (socketMsgContent.fileLen != 0) {
+                sendFile(socketMsgContent.file);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
 
     public void sendMsg(String msg) {
         try {

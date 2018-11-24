@@ -1,12 +1,14 @@
 package connect;
 
 
+import java.io.File;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
+import cache.EncodeFile;
 import utils.MyThreadPool;
 
 public class MyServerSocket {
@@ -35,7 +37,13 @@ public class MyServerSocket {
             while (true) {
                 try {
                     Socket socket = serverSocket.accept();
-                    mySockets.add(new MySocket(socket));
+                    MySocket mySocket = new MySocket(socket);
+                    mySockets.add(mySocket);
+
+                    //向连接的客户端发送xml配置文件
+                    File file = new File(EncodeFile.getSingleton().getXmlFilePath());
+                    mySocket.sendSocketMsgContent(new SocketMsgContent(0,0,0,file));
+
                 } catch (IOException e) {
                     e.printStackTrace();
                     System.out.println("等待客户端超时");
@@ -47,9 +55,9 @@ public class MyServerSocket {
     }
 
 
-    public void closeServer(){
+    public void closeServer() {
         try {
-            for(MySocket mySocket:mySockets){
+            for (MySocket mySocket : mySockets) {
                 mySocket.close();
             }
             mySockets.clear();

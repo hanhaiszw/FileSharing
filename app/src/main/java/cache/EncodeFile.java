@@ -13,7 +13,9 @@ import com.thoughtworks.xstream.io.xml.DomDriver;
 
 import java.io.File;
 import java.util.Vector;
+import java.util.concurrent.ThreadPoolExecutor;
 
+import connect.SocketMsgContent;
 import data.CachePath;
 import data.ConstantData;
 import utils.ToolUtils;
@@ -104,7 +106,7 @@ public class EncodeFile {
             }
             int startPos = (i - 1) * partLen;
             PartFile partFile = PartFileFactory.createPartFile(runModeString);
-            partFile.initPartFile(folderPath, i, file, startPos, len, K, AndroidId);
+            partFile.initPartFile(folderPath, i, K, AndroidId, file, startPos, len);
             partFile.reencodePartFile();
             partFileVector.add(partFile);
         }
@@ -227,6 +229,15 @@ public class EncodeFile {
             newEncodeFile.AndroidId = encodeFile.AndroidId;
             newEncodeFile.K = encodeFile.K;
             newEncodeFile.runModeString = encodeFile.runModeString;
+            newEncodeFile.currentPieceNum = 0;
+            //处理partFile
+            for (PartFile partFile : encodeFile.partFileVector) {
+                PartFile newPartFile = PartFileFactory.createPartFile(newEncodeFile.runModeString);
+                //创建存储路径
+                newPartFile.initPartFile(partFile, newEncodeFile.folderPath);
+                newEncodeFile.partFileVector.add(newPartFile);
+            }
+            //写入配置文件
             newEncodeFile.object2xml();
             encodeFileSingleton = newEncodeFile;
         }
@@ -256,6 +267,26 @@ public class EncodeFile {
         ToolUtils.mergeFiles(outFilePath, files);
 
         Log.d("hanhai", "恢复数据成功");
+    }
+
+
+    //接收到文件后 存储文件
+    public void savePartFile(SocketMsgContent socketMsgContent) {
+        int partNo = socketMsgContent.partNo;
+        for (PartFile partFile : partFileVector) {
+            if (partFile.partNo == partNo) {
+                boolean flag = partFile.saveFile(socketMsgContent.file, socketMsgContent.fileName);
+                if (flag) updateCurrentPieceNum();
+                //删除临时文件
+                ToolUtils.deleteFile(socketMsgContent.file);
+                break;
+            }
+        }
+    }
+
+    //更新文件片数
+    private synchronized void updateCurrentPieceNum() {
+        currentPieceNum += 1;
     }
 
     public String getXmlFilePath() {

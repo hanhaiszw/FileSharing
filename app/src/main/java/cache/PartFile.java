@@ -30,7 +30,6 @@ abstract class PartFile {
 
     Vector<int[]> coefMatrix = new Vector<>();
 
-
     @XStreamOmitField
     int K;
 
@@ -42,6 +41,7 @@ abstract class PartFile {
 
     @XStreamOmitField
     String reencodeFilePath; //用来存储再编码文件
+
 
     @XStreamOmitField
     String AndroidId;
@@ -61,29 +61,42 @@ abstract class PartFile {
     }
 
 
-    //创建文件存储路径
+    // 只创建文件存储路径
     private void createCachePath(String folderPath) {
         this.partFilePath = ToolUtils.createFolder(folderPath, partNo + "");
         this.pieceFilePath = ToolUtils.createFolder(partFilePath, "pieceFilePath");
         this.reencodeFilePath = ToolUtils.createFolder(partFilePath, "reencodeFilePath");
     }
 
+    // 只恢复隐藏的成员变量值
     public void recoverOmitField(String folderPath, int K, String AndroidId) {
         this.K = K;
+        this.AndroidId = AndroidId;
         this.partFilePath = folderPath + File.separator + partNo;
         this.pieceFilePath = partFilePath + File.separator + "pieceFilePath";
         this.reencodeFilePath = partFilePath + File.separator + "reencodeFilePath";
-        this.AndroidId = AndroidId;
+    }
+
+    // 恢复隐藏的成员变量值，创建存储文件夹
+    public void initPartFile(PartFile partFile, String folderPath) {
+        this.partNo = partFile.partNo;
+        this.pieceFileLen = partFile.pieceFileLen;
+        this.partFileLen = partFile.partFileLen;
+        this.K = partFile.K;
+        this.AndroidId = partFile.AndroidId;
+
+        //创建存储文件夹
+        createCachePath(folderPath);
     }
 
     //从文件的第几个字节开始读取到第几个字节
-    public void initPartFile(String folderPath, int partNo, File file, int startPos, int len, int K, String AndroidId) {
+    public void initPartFile(String folderPath, int partNo,  int K, String AndroidId,
+                             File file, int startPos, int len) {
         this.partNo = partNo;
         this.pieceFileLen = (len % K == 0 ? len / K : (len / K + 1)) + (1 + K); //记得加上系数矩阵的长度
-        this.K = K;
         this.partFileLen = len;
-        this.AndroidId = AndroidId;
 
+        recoverOmitField(folderPath, K, AndroidId);
         createCachePath(folderPath);
         initCoefMatrix();
         try {
@@ -122,7 +135,6 @@ abstract class PartFile {
                 if (len == 0 && readLen != 0) {
                     byte[] bs = new byte[readLen];
                     bos.write(bs);
-                    //_0Num = readLen;
                 }
                 bos.close();
                 fos.close();
@@ -167,6 +179,47 @@ abstract class PartFile {
                 pieceFileLen, filePath, Encode_Core_Mode.REENCODE_MODE);
     }
 
+    //保存文件
+    public boolean saveFile(File file, String fileName) {
+        //先判断文件长度
+        int fileLen = (int) file.length();
+        if (fileLen != pieceFileLen) return false;
+
+        //获取文件的编码系数
+        byte[] bytes = new byte[1 + K];
+
+        try {
+            RandomAccessFile af = new RandomAccessFile(file, "r");
+            //读取整个文件放在buffer字节数组中
+            af.readFully(bytes);
+            af.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+
+        // 计算秩
+        int row = coefMatrix.size();
+        byte[][] bt_coef = new byte[row + 1][K];
+        for (int i = 0; i < row; i++) {
+            int[] array = coefMatrix.get(i);
+            for (int j = 0; j < K; j++) {
+                bt_coef[i][j] = (byte) array[j];
+            }
+        }
+        for (int i = 0; i < K; i++) {
+            bt_coef[row][i] = bytes[i + 1];
+        }
+
+        int rank = NCUtils.getRank(bt_coef);
+        if (rank > row) {
+            File newFile = ToolUtils.createFile(pieceFilePath, fileName);
+            ToolUtils.copyFile(file, newFile);
+            return true;
+        }
+
+        return false;
+    }
 
     private File encodeCore(String NCUtilsMethodsName, int retLen, String filePath, Encode_Core_Mode encode_core_mode) {
         Vector<File> files = ToolUtils.getUnderFiles(pieceFilePath);
