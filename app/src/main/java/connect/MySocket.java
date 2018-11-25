@@ -24,12 +24,16 @@ public class MySocket {
 
     public MySocket(Socket socket) {
         this.socket = socket;
-        socketMsgParse = new SocketMsgParse();
+        socketMsgParse = new SocketMsgParse(this);
         init();
     }
 
-    public void close() throws IOException {
-        socket.close();
+    public void close(){
+        try {
+            socket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private void init() {
@@ -100,14 +104,30 @@ public class MySocket {
             socketMsgContent.serveOrClient = dis.readInt();
             socketMsgContent.code = dis.readInt();
 
+            /**
+             * 分支一  文件请求
+             */
+            if (socketMsgContent.code == 1) {
+                socketMsgContent.requestLen = dis.readInt();
+                byte[] bytes = new byte[socketMsgContent.requestLen];
+                dis.readFully(bytes);
+                socketMsgContent.requestBytes = bytes;
 
-            socketMsgContent.partNo = dis.readInt();
-            socketMsgContent.fileLen = dis.readInt();
-            if (socketMsgContent.fileLen != 0) {
+            } else if (socketMsgContent.code == 2) {
+                /**
+                 * 分支二  接收xml文件或是partfile
+                 */
+                socketMsgContent.partNo = dis.readInt();
+                socketMsgContent.fileLen = dis.readInt();
+
                 socketMsgContent.fileName = dis.readUTF();
                 socketMsgContent.file = receiveFile(dis, data, socketMsgContent.fileLen);
+            }else if(socketMsgContent.code == 3){
+                /**
+                 * 分支三 执行的是离开
+                 */
             }
-            socketMsgParse.parse(this, socketMsgContent);
+            socketMsgParse.parse(socketMsgContent);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -141,10 +161,26 @@ public class MySocket {
             DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
             dos.writeInt(socketMsgContent.serveOrClient);
             dos.writeInt(socketMsgContent.code);
-            dos.writeInt(socketMsgContent.partNo);
-            dos.writeInt(socketMsgContent.fileLen);
-            if (socketMsgContent.fileLen != 0) {
+
+            /**
+             * 分支一  文件请求
+             */
+            if (socketMsgContent.code == 1) {
+                dos.writeInt(socketMsgContent.requestLen);
+                dos.write(socketMsgContent.requestBytes);
+
+            } else if (socketMsgContent.code == 0 || socketMsgContent.code == 2) {
+                /**
+                 * 分支二  接收xml文件或是partfile
+                 */
+                dos.writeInt(socketMsgContent.partNo);
+                dos.writeInt(socketMsgContent.fileLen);
+                dos.writeUTF(socketMsgContent.fileName);
                 sendFile(socketMsgContent.file);
+            }else if (socketMsgContent.code == 3){
+                /**
+                 * 分支三  执行的是离开
+                 */
             }
         } catch (IOException e) {
             e.printStackTrace();

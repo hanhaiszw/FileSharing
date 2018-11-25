@@ -90,7 +90,7 @@ abstract class PartFile {
     }
 
     //从文件的第几个字节开始读取到第几个字节
-    public void initPartFile(String folderPath, int partNo,  int K, String AndroidId,
+    public void initPartFile(String folderPath, int partNo, int K, String AndroidId,
                              File file, int startPos, int len) {
         this.partNo = partNo;
         this.pieceFileLen = (len % K == 0 ? len / K : (len / K + 1)) + (1 + K); //记得加上系数矩阵的长度
@@ -181,17 +181,19 @@ abstract class PartFile {
 
     //保存文件
     public boolean saveFile(File file, String fileName) {
-        //先判断文件长度
+        // 1 判断文件长度
         int fileLen = (int) file.length();
         if (fileLen != pieceFileLen) return false;
 
+        // 2 再计算秩
         //获取文件的编码系数
-        byte[] bytes = new byte[1 + K];
-
+        byte[] bytes = new byte[K];
         try {
             RandomAccessFile af = new RandomAccessFile(file, "r");
-            //读取整个文件放在buffer字节数组中
+            //跳过第一个字节
+            af.skipBytes(1);  //
             af.readFully(bytes);
+
             af.close();
         } catch (IOException e) {
             e.printStackTrace();
@@ -208,17 +210,71 @@ abstract class PartFile {
             }
         }
         for (int i = 0; i < K; i++) {
-            bt_coef[row][i] = bytes[i + 1];
+            bt_coef[row][i] = bytes[i];
         }
 
         int rank = NCUtils.getRank(bt_coef);
         if (rank > row) {
             File newFile = ToolUtils.createFile(pieceFilePath, fileName);
             ToolUtils.copyFile(file, newFile);
+            //更新系数数组
+            updateCoefMatrix(bytes);
             return true;
         }
 
         return false;
+    }
+
+    //更新系数数组
+    private synchronized void updateCoefMatrix(byte[] bytes) {
+        int[] intArray = new int[K];
+        for (int i = 0; i < K; i++) {
+            int temp = bytes[i];
+            if (temp < 0)
+                temp += 256;
+            intArray[i] = temp;
+        }
+        coefMatrix.add(intArray);
+    }
+
+    //向对方请求文件  获取需要请求的文件编码系数
+    public byte[] getRequestCoef(PartFile itsPartFile) {
+        int row = coefMatrix.size();
+        if (row == K)
+            return null;
+        //判断哪个编码系数对自己有用
+        //把 int 系数数组转化为byte数组
+        Vector<int[]> itsCoefMat = itsPartFile.coefMatrix;
+        int[] ret = null;
+        if (coefMatrix.size() == 0) {
+            ret = itsCoefMat.get(0);
+        } else {
+            Vector<int[]> vCoef = new Vector<>(row + 1);
+            for (int i = 0; i < row; i++) {
+                int[] array = coefMatrix.get(i);
+                vCoef.setElementAt(array, i);
+            }
+            for (int[] array : itsCoefMat) {
+                vCoef.setElementAt(array, row);
+                byte[][] bt_coef = intArrVector2byteArray(vCoef);
+                int rank = NCUtils.getRank(bt_coef);
+                if (rank == row + 1) {
+                    ret = array;
+                    break;
+                }
+            }
+        }
+        if (ret == null) {
+            return null;
+        } else {
+            byte[] requestCoef = new byte[K + 1];
+            //第一个字节存放partNo
+            requestCoef[0] = (byte) partNo;
+            for (int i = 0; i < K; i++) {
+                requestCoef[i+1] = (byte) ret[i];
+            }
+            return requestCoef;
+        }
     }
 
     private File encodeCore(String NCUtilsMethodsName, int retLen, String filePath, Encode_Core_Mode encode_core_mode) {
@@ -284,7 +340,32 @@ abstract class PartFile {
         }
     }
 
-    public abstract File getSendFile();
+    private byte[][] intArrVector2byteArray(Vector<int[]> intArrVector) {
+        int row = intArrVector.size();
+        int col = intArrVector.get(0).length;
+        byte[][] ret = new byte[row][col];
+        for (int i = 0; i < row; i++) {
+            int[] array = intArrVector.get(i);
+            for (int j = 0; j < col; j++) {
+                ret[i][j] = (byte) array[j];
+            }
+        }
+        return ret;
+    }
+
+
+    //因为OD下 RS下都会用到这种方法 所以在父类定义
+    public File getODSendFile(byte[] coef){
+
+    }
+
+    //因为NC下 RS下都会用到这种方法 所以在父类定义
+    public File getNCSendFile(byte[] coef){
+
+    }
+
+
+    public abstract File getSendFile(byte[] coef);
 }
 
 //encodeCore方法运行的两种方式

@@ -245,7 +245,7 @@ public class EncodeFile {
     }
 
     //恢复文件
-    public void recover() {
+    public synchronized void recover() {
         //如果本机就是文件源，则不执行解码
         if (AndroidId.equals(ConstantData.ANDROID_ID)) {
             return;
@@ -255,13 +255,15 @@ public class EncodeFile {
             return;
         }
         File[] files = new File[partNum];
-        synchronized (EncodeFile.class) {
-            for (PartFile partFile : partFileVector) {
-                File file = partFile.recoverPartFile();
-                int index = partFile.partNo - 1;
-                files[index] = file;
-            }
+
+        for (PartFile partFile : partFileVector) {
+            File file = partFile.recoverPartFile();
+            if (file == null)
+                return;
+            int index = partFile.partNo - 1;
+            files[index] = file;
         }
+
 
         String outFilePath = folderPath + File.separator + fileName;
         ToolUtils.mergeFiles(outFilePath, files);
@@ -282,6 +284,40 @@ public class EncodeFile {
                 break;
             }
         }
+    }
+
+    //获取文件请求信息
+    public Vector<byte[]> getFileRequest(EncodeFile itsEncodeFile) {
+        Vector<byte[]> requestVector = new Vector<>();
+        for (PartFile itsPartFile : itsEncodeFile.partFileVector) {
+            for (PartFile partFile : partFileVector) {
+                if (partFile.partNo == itsPartFile.partNo) {
+                    //
+                    byte[] bytes = partFile.getRequestCoef(itsPartFile);
+                    if (bytes != null) {
+                        requestVector.add(bytes);
+                    }
+                    break;
+                }
+            }
+        }
+        return requestVector;
+    }
+
+    //获取到待发送的文件
+    public File getSendFile(SocketMsgContent socketMsgContent) {
+        byte[] requestBytes = socketMsgContent.requestBytes;
+        int partNo = (int) requestBytes[0];
+        PartFile partFile = null;
+        for (PartFile partFile1 : partFileVector) {
+            if(partFile1.partNo == partNo){
+                partFile = partFile1;
+            }
+        }
+
+        File file = partFile.getSendFile(socketMsgContent.requestBytes);
+
+        return file;
     }
 
     //更新文件片数

@@ -8,7 +8,7 @@ import java.io.File;
 class ODPartFile extends PartFile {
 
     @Override
-    public File getSendFile() {
-        return null;
+    public File getSendFile(byte[] coef) {
+        return getODSendFile(coef);
     }
 }
