@@ -1,5 +1,7 @@
 package nc;
 
+import android.util.Log;
+
 import java.util.Random;
 
 /**
@@ -9,9 +11,12 @@ import java.util.Random;
 public class NCUtils {
     // Used to load the 'native-lib' library on application startup.
     static {
+
         System.loadLibrary("native-lib");
         //申请有限域
         InitGalois();
+
+        Log.e("hanhai","载入native-cpp");
     }
 
     //用于实现反射  根据方法名调用方法
@@ -28,6 +33,7 @@ public class NCUtils {
         Multiply2(a, 2, 2, b, 2, 2, ret);
         return ret;
     }
+
 
     /**
      * 只生成一个再编码文件

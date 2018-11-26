@@ -5,4 +5,5 @@ package data;
  */
 public enum MsgType {
     SHOW_MSG,
+    ENCODE_FILE_CHANGE
 }

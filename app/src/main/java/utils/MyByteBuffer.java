@@ -1,6 +1,8 @@
 package utils;
 
 
+import android.util.Log;
+
 import java.util.Vector;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -16,7 +18,7 @@ public class MyByteBuffer {
     private static Vector<BufferWithLock> bufferWithLocks_11 = new Vector<>();
 
     static {
-        // 4个长度11的   4个长度3的
+        // 4个长度11M的   4个长度3M的
         for (int i = 0; i < 4; i++) {
             bufferWithLocks_3.add(new BufferWithLock(SMALL_SIZE));
             bufferWithLocks_11.add(new BufferWithLock(BIG_SIZE));
@@ -25,7 +27,7 @@ public class MyByteBuffer {
 
     //获取buffer
     public static byte[] getBuffer(int len) throws Exception {
-        Vector<BufferWithLock > bufferWithLocks;
+        Vector<BufferWithLock> bufferWithLocks;
         if (len <= 1 * 1024 * 1024) {
             return new byte[len];
         } else if (len <= SMALL_SIZE) {
@@ -35,13 +37,26 @@ public class MyByteBuffer {
         } else {
             return new byte[len];
         }
+
+        //有可能卡死在此处
+        //需要设置超时 跳出
+        long startTime = System.currentTimeMillis();
         while (true) {
-            for (BufferWithLock bufferWithLock : bufferWithLocks) {
+            for (int i = 0; i < bufferWithLocks.size(); i++) {
+                BufferWithLock bufferWithLock = bufferWithLocks.get(i);
                 if (bufferWithLock.bufferTryLock()) {
+                    Log.e("hanhai", "获取到" + i + "下标buffer");
+
                     //Log.d("hanhai", "获取到buffer");
                     return bufferWithLock.getBuffer();
                 }
             }
+
+            // 如果5秒还没获取到buffer，则自定义一个buffer
+            if (System.currentTimeMillis() - startTime > 5000) {
+                return new byte[len];
+            }
+
         }
 
     }
@@ -50,14 +65,14 @@ public class MyByteBuffer {
     public static void releaseBuffer(byte[] bytes) {
         if (bytes == null) return;
         for (BufferWithLock bufferWithLock : bufferWithLocks_3) {
-            if (bufferWithLock.isBufferAddEqual(bytes)) {
+            if (bufferWithLock.isBufferEqual(bytes)) {
                 bufferWithLock.bufferUnlock();
                 return;
             }
         }
 
         for (BufferWithLock bufferWithLock : bufferWithLocks_11) {
-            if (bufferWithLock.isBufferAddEqual(bytes)) {
+            if (bufferWithLock.isBufferEqual(bytes)) {
                 bufferWithLock.bufferUnlock();
                 return;
             }
@@ -66,12 +81,20 @@ public class MyByteBuffer {
 }
 
 class BufferWithLock {
-    private ReentrantLock lock;
+    // ReentrantLock 是在多个线程内同步，不能再单个线程内保证资源只被一次占有
+    //private ReentrantLock lock;
     private byte[] buffer;
     private int len;
 
+    /**
+     * 0 为开锁状态
+     * 1 为加锁状态
+     */
+    private int myLock;
+
     BufferWithLock(int len) {
-        lock = new ReentrantLock(true);
+        //lock = new ReentrantLock(true);
+        myLock = 0;
         this.len = len;
     }
 
@@ -82,21 +105,28 @@ class BufferWithLock {
         return buffer;
     }
 
-    public boolean isBufferAddEqual(byte[] bytes) {
+    public boolean isBufferEqual(byte[] bytes) {
         return buffer == bytes;
     }
 
-    public boolean bufferTryLock() {
-        return lock.tryLock();
+    public synchronized boolean bufferTryLock() {
+        //return lock.tryLock();
+        if (myLock == 0) {
+            myLock = 1;
+            return true;
+        } else {
+            return false;
+        }
     }
 
 
-    public void bufferUnlock() {
-        try {
-            lock.unlock();
-        } catch (IllegalMonitorStateException e) {
-            //如果当前线程不拥有此锁
-            e.printStackTrace();
-        }
+    public synchronized void bufferUnlock() {
+//        try {
+//            lock.unlock();
+//        } catch (IllegalMonitorStateException e) {
+//            //如果当前线程不拥有此锁
+//            e.printStackTrace();
+//        }
+        myLock = 0;
     }
 }

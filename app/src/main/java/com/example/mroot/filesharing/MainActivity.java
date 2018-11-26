@@ -37,6 +37,7 @@ import data.CachePath;
 import data.MsgType;
 import data.RunMode;
 import nc.NCUtils;
+import utils.MyByteBuffer;
 import utils.MyThreadPool;
 import wifi.WifiAPControl;
 
@@ -59,6 +60,8 @@ public class MainActivity extends AppCompatActivity {
 
     private static RunMode runMode;
 
+    private static MainActivity mainActivity;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -77,6 +80,8 @@ public class MainActivity extends AppCompatActivity {
         );
 
         init();
+        mainActivity = this;
+
     }
 
     private void init() {
@@ -90,11 +95,6 @@ public class MainActivity extends AppCompatActivity {
         EncodeFile.updateSingleton(runMode.lastXMLFilePath);
         setTitle(runMode.runModeString);
 
-//        File file = new File(runMode.lastXMLFilePath);
-//        if (!file.exists()) {
-//            Log.e("hanhai", "文件名为 " + file.getName());
-//            Log.e("hanhai", "文件长度为 " + (int) file.length());
-//        }
     }
 
 
@@ -109,20 +109,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @OnClick(R.id.btn_openWifi)
-    public void test() {
-        wifiAPControl.openWifi();
+    public void openClient() {
+        MyThreadPool.execute(() -> {
+            //wifiAPControl.openWifi();
+            myClientSocket.connect(ConnectConstant.SERVER_IP, ConnectConstant.SERVER_PORT);
+        });
 
-    }
-
-    @OnClick(R.id.btn_test)
-    public void test1() {
-//        MyThreadPool.execute(() -> {
-//            myClientSocket.connect(ConnectConstant.SERVER_IP,ConnectConstant.SERVER_PORT);
-//            myClientSocket.sendFile(new File(CachePath.APP_PATH + File.separator+"My Heart Will Go On.mp4"));
-//        });
-        byte[] a = {112, 34, 56, (byte) 234};
-        byte[] b = {113, 23, 45, 89};
-        byte[] ret = NCUtils.mul(a, b);
     }
 
     @OnClick(R.id.btn_openAP)
@@ -132,9 +124,24 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    @OnClick(R.id.btn_test)
+    public void test1() {
+        EncodeFile.getSingleton().recover();
+//        try {
+//            for (int i = 0; i < 5; i++) {
+//                byte[] bytes = MyByteBuffer.getBuffer(10 *1024*1024);
+//            }
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        } finally {
+//
+//        }
+    }
+
+
     //处理各个线程发来的消息
     @SuppressLint("HandlerLeak")
-    private static Handler handler = new Handler() {
+    private Handler handler = new Handler() {
         @Override
         public void handleMessage(final Message msg) {
             MsgType msgType = MsgType.values()[msg.what];
@@ -142,7 +149,14 @@ public class MainActivity extends AppCompatActivity {
                 case SHOW_MSG:
                     Toast.makeText(context, msg.obj.toString(), Toast.LENGTH_SHORT).show();
                     break;
+                case ENCODE_FILE_CHANGE:
+                    EncodeFile encodeFile = EncodeFile.getSingleton();
+                    runMode.runModeString = encodeFile.getRunModeString();
+                    runMode.K = encodeFile.getK();
 
+                    setTitle(runMode.runModeString);
+
+                    break;
                 default:
                     break;
             }
@@ -231,11 +245,20 @@ public class MainActivity extends AppCompatActivity {
     }
 
     //全局发送message到handle处理的方法
-    public static void sendMsg2UIThread(int what, Object obj) {
+    public void sendMsg2UIThread(int what, Object obj) {
         //sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(),"hello, world!");
         if (handler != null) {
             Message.obtain(handler, what, obj).sendToTarget();
         }
+    }
+
+    /**
+     * 获取MainActivity实例
+     *
+     * @return
+     */
+    public static MainActivity getMainActivity() {
+        return mainActivity;
     }
 
     @Override

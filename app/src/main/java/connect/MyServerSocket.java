@@ -42,7 +42,8 @@ public class MyServerSocket {
 
                     //向连接的客户端发送xml配置文件
                     File file = new File(EncodeFile.getSingleton().getXmlFilePath());
-                    mySocket.sendSocketMsgContent(new SocketMsgContent(0,0,0,file));
+                    mySocket.sendSocketMsgContent(
+                            new SocketMsgContent(SocketMsgContent.SERVER_MSG, SocketMsgContent.XML_PRATNO, file));
 
                 } catch (IOException e) {
                     e.printStackTrace();

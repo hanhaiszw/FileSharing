@@ -1,10 +1,14 @@
 package cache;
 
+import com.example.mroot.filesharing.MainActivity;
+
 import java.io.File;
 import java.util.Vector;
 
 import connect.MySocket;
 import connect.SocketMsgContent;
+import data.MsgType;
+import utils.ToolUtils;
 
 /**
  * 解析Socket信息
@@ -26,95 +30,136 @@ public class SocketMsgParse {
 
     public void parse(SocketMsgContent socketMsgContent) {
         int code = socketMsgContent.code;
-        SocketMsgContent answer1 = null;
-        SocketMsgContent answer2 = null;
+
         switch (code) {
-            // 0 xml文件
-            case 0:
-                answer1 = solveXMLFile(socketMsgContent);
-                //文件请求
-                answer2 = getFileQuestInfor();
-                break;
             // 1 对方的文件请求
-            case 1:
+            case SocketMsgContent.CODE_FILE_REQUEST:
                 //
                 solveFileRequest(socketMsgContent);
                 break;
             // 2 partFile分片文件
-            case 2:
-                answer1 = solvePartFile(socketMsgContent);
+            case SocketMsgContent.CODE_XML_PART_FILE:
+                if(socketMsgContent.partNo == SocketMsgContent.XML_PRATNO){
+                    // 处理文件请求
+                    solveXMLFile(socketMsgContent);
+                }else{
+                    solvePartFile(socketMsgContent);
+                }
                 break;
             // 3 leave 或者其他信息
-            case 3:
+            case SocketMsgContent.CODE_LEAVE:
                 //执行离开
                 solveLeave();
+                break;
+            // 4 对方的一次文件请求处理完毕
+            case SocketMsgContent.CODE_ANSWER_END:
+                // 再次请求文件
+                sendFileQuestInfor();
                 break;
             default:
                 break;
         }
-        if (answer1 != null) {
-            mySocket.sendSocketMsgContent(answer1);
-        }
-        if (answer2 != null) {
-            mySocket.sendSocketMsgContent(answer2);
-        }
+
+        // 把改变发给MainActivity
+        // 通知MainActivity, EncodeFile单例发生了改变
+        MainActivity.getMainActivity().sendMsg2UIThread(MsgType.ENCODE_FILE_CHANGE.ordinal(),"");
+
     }
 
 
-
-
     //处理xml配置文件
-    private SocketMsgContent solveXMLFile(SocketMsgContent socketMsgContent) {
+    private void solveXMLFile(SocketMsgContent socketMsgContent) {
         itsEncodeFile = EncodeFile.xml2obj(socketMsgContent.file.getPath());
-        SocketMsgContent answer = null;
         //如果是服务器端发送来的xml配置信息，客户端是需要给服务器返回xml配置信息的
-        if (socketMsgContent.serveOrClient == 0) {
+        if (socketMsgContent.serveOrClient == SocketMsgContent.SERVER_MSG) {
             EncodeFile.updateSingleton(itsEncodeFile);
             File file = new File(EncodeFile.getSingleton().getXmlFilePath());
-            answer = new SocketMsgContent(1, 0, 0, file);
+            SocketMsgContent answer = new SocketMsgContent(
+                    SocketMsgContent.CLIENT_MSG, SocketMsgContent.XML_PRATNO, file);
+            //发送xml文件
+            mySocket.sendSocketMsgContent(answer);
+
         }
-        //文件请求判断
-        return answer;
+        //删除对方的xml文件
+        ToolUtils.deleteFile(socketMsgContent.file);
+
+        //发送文件请求
+        sendFileQuestInfor();
     }
 
     /**
      * 处理文件请求
+     *
      * @param socketMsgContent
      */
     private void solveFileRequest(SocketMsgContent socketMsgContent) {
+        int requestLen = socketMsgContent.requestLen;
+        byte[] requestBytes = socketMsgContent.requestBytes;
+
+        EncodeFile encodeFile = EncodeFile.getSingleton();
+        int col = 1 + encodeFile.getK();
+        int row = requestLen / col;
+
+        Vector<byte[]> requestVector = new Vector<>();
+        int index = 0;
+        for (int i = 0; i < row; i++) {
+            byte[] request = new byte[col];
+            for (int j = 0; j < col; j++) {
+                request[j] = requestBytes[index++];
+            }
+            requestVector.add(request);
+        }
+
+        for (byte[] request : requestVector) {
+            int partNo = (int) request[0];
+            File file = encodeFile.getSendFile(partNo, request);
+            if (file != null) {
+                SocketMsgContent msgContent = new SocketMsgContent(
+                        SocketMsgContent.SERVER_CLIENT_MSG, partNo, file);
+                mySocket.sendSocketMsgContent(msgContent);
+                encodeFile.afterSendFile(partNo,file);
+            }
+        }
+
+        // 一次文件请求结束
+        SocketMsgContent msgContent = new SocketMsgContent(
+                SocketMsgContent.SERVER_CLIENT_MSG, SocketMsgContent.CODE_ANSWER_END);
+        mySocket.sendSocketMsgContent(msgContent);
 
     }
 
 
-
-
-    //接收到partFile
-    private SocketMsgContent solvePartFile(SocketMsgContent socketMsgContent) {
+    /**
+     * 接收到partFile
+     *
+     * @param socketMsgContent
+     * @return
+     */
+    private void solvePartFile(SocketMsgContent socketMsgContent) {
         //保存对方发送来的文件
         EncodeFile.getSingleton().savePartFile(socketMsgContent);
-        //是否再次向对方请求文件处理
-        //发送文件请求逻辑
-        SocketMsgContent answer = getFileQuestInfor();
-        return answer;
     }
 
     private synchronized void solveLeave() {
         leaveFlag += 1;
         //关闭socket
-        if(leaveFlag == 2)
+        if (leaveFlag == 2)
             mySocket.close();
     }
 
 
-    private SocketMsgContent getFileQuestInfor() {
+    /**
+     * 发送文件请求
+     */
+    private void sendFileQuestInfor() {
         SocketMsgContent socketMsgContent = new SocketMsgContent();
-        socketMsgContent.serveOrClient = 2;
+        socketMsgContent.serveOrClient = SocketMsgContent.SERVER_CLIENT_MSG;
 
         Vector<byte[]> requestVector = EncodeFile.getSingleton().getFileRequest(itsEncodeFile);
         if (requestVector.size() == 0) {
             //说明对方没有对自己有用的数据
             //离开
-            socketMsgContent.code = 3;
+            socketMsgContent.code = SocketMsgContent.CODE_LEAVE;
             solveLeave();
         } else {
             int row = requestVector.size();
@@ -127,13 +172,13 @@ public class SocketMsgParse {
                 }
             }
             //文件请求
-            socketMsgContent.code = 1;
+            socketMsgContent.code = SocketMsgContent.CODE_FILE_REQUEST;
 
             socketMsgContent.requestLen = requestBytes.length;
             socketMsgContent.requestBytes = requestBytes;
         }
 
-        return socketMsgContent;
+        mySocket.sendSocketMsgContent(socketMsgContent);
     }
 
 

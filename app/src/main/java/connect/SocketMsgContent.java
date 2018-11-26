@@ -9,11 +9,19 @@ public class SocketMsgContent {
     // serveOrClient = 0 服务器信息
     // serverOrClient = 1 客户端信息
     // serverOrClient = 2 统一信息
+    public final static int SERVER_MSG = 0;
+    public final static int CLIENT_MSG = 1;
+    public final static int SERVER_CLIENT_MSG = 2;
     public int serveOrClient;
     // code = 0 xml配置文件
     // code = 1 文件请求
     // code = 2 partFile分片文件
     // code = 3 leave 或者其他信息
+    // code = 4 对方一次文件应答完成
+    public final static int CODE_FILE_REQUEST = 1;
+    public final static int CODE_XML_PART_FILE = 2;
+    public final static int CODE_LEAVE = 3;
+    public final static int CODE_ANSWER_END = 4;
     public int code;
 
 
@@ -35,6 +43,7 @@ public class SocketMsgContent {
      */
     // partNo = 0 xml配置文件
     // partNo = 1 -- partNum
+    public final static int XML_PRATNO = 0;
     public int partNo;
 
     // 文件
@@ -46,22 +55,21 @@ public class SocketMsgContent {
     //public String tempFileName;
 
     /**
-     * code = 3
-     * 分支三 执行的是离开
+     * code = 3 4
+     * 分支三 执行的是离开 或者 对方一次文件应答完成
      */
-
-
 
 
     /**
      * 分支一 构造方法
+     * 文件请求
      *
      * @param requestLen
      * @param requestBytes
      */
     public SocketMsgContent(int requestLen, byte[] requestBytes) {
-        this.serveOrClient = 2;   // 2 不再区分服务器还是客户端
-        this.code = 1;            // 1 表示是文件请求
+        this.serveOrClient = SERVER_CLIENT_MSG;   // 2 不再区分服务器还是客户端
+        this.code = CODE_FILE_REQUEST;            // 1 表示是文件请求
         this.requestLen = requestLen;
         this.requestBytes = requestBytes;
     }
@@ -71,18 +79,29 @@ public class SocketMsgContent {
      * 分支二 信息构造方法
      *
      * @param serveOrClient 发送xml文件时，需要区分是服务器还是客户端发送的
-     * @param code
      * @param partNo
      * @param file          不可为null
      */
-    public SocketMsgContent(int serveOrClient, int code, int partNo, File file) {
+    public SocketMsgContent(int serveOrClient, int partNo, File file) {
         this.serveOrClient = serveOrClient;
-        this.code = code;
+        this.code = CODE_XML_PART_FILE;
         this.partNo = partNo;
         this.file = file;
 
         this.fileLen = (int) file.length();
         this.fileName = file.getName();
+    }
+
+
+    /**
+     * 分支三  执行的是离开 或者 对方一次文件应答完成
+     *
+     * @param serveOrClient
+     * @param code
+     */
+    public SocketMsgContent(int serveOrClient, int code) {
+        this.serveOrClient = serveOrClient;
+        this.code = code;
     }
 
     public SocketMsgContent() {

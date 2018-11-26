@@ -11,4 +11,11 @@ class ODPartFile extends PartFile {
     public File getSendFile(byte[] coef) {
         return getODSendFile(coef);
     }
+
+    @Override
+    public void afterSendFile(File file) {
+        afterODSendFile(file);
+    }
+
+
 }

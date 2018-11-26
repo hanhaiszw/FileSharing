@@ -2,6 +2,7 @@ package utils;
 
 import android.os.Environment;
 
+
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -10,6 +11,9 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Vector;
 
 public class ToolUtils {
@@ -20,7 +24,6 @@ public class ToolUtils {
             "abcdefghijklmnopqrstuvwxyz" + "0123456789";
 
     /**
-     *
      * @param size 生成的随机字符串的长度
      * @return
      */
@@ -34,6 +37,29 @@ public class ToolUtils {
         return ret.toString();
     }
 
+    /**
+     * 文件的时间比较器
+     * asc = -1 降序
+     * asc = 1  升序
+     */
+    private static int asc = -1;
+    private static Comparator<File> dateComparator = (lhs, rhs) -> {
+        if (rhs.lastModified() > lhs.lastModified()) {
+            return -1 * asc;
+        } else if (rhs.lastModified() == lhs.lastModified()) {
+            return 0;
+        } else {
+            return 1 * asc;
+        }
+    };
+
+    /**
+     * 对文件降序排序
+     * @param files
+     */
+    public static void fileDesSort(List<File> files) {
+        Collections.sort(files, dateComparator);
+    }
 
     /**
      * 获取SDcard根路径
@@ -55,6 +81,7 @@ public class ToolUtils {
         String folderPath = path + File.separator + folderName;
         return createFolder(folderPath);
     }
+
     public static String createFolder(String folderPath) {
         File tempFolder = new File(folderPath);
         if (!tempFolder.exists()) {
@@ -66,17 +93,18 @@ public class ToolUtils {
     }
 
     //判断文件是否存在
-    public static boolean isFileExists(String path, String fileName){
+    public static boolean isFileExists(String path, String fileName) {
         File myFile = new File(path + File.separator + fileName);
         return myFile.exists();
     }
 
-    public static File createFile(String path, String fileName){
-        return createFile(path+File.separator+fileName);
+    public static File createFile(String path, String fileName) {
+        return createFile(path + File.separator + fileName);
     }
-    public static File createFile(String filePath){
+
+    public static File createFile(String filePath) {
         File myFile = new File(filePath);
-        if(!myFile.exists()){
+        if (!myFile.exists()) {
             try {
                 myFile.createNewFile();
             } catch (IOException e) {
@@ -88,14 +116,13 @@ public class ToolUtils {
 
 
     /**
-     *
      * @param path
      * @param fileName
      * @param inputData
-     * @param append  true:续写， false：覆盖写
+     * @param append    true:续写， false：覆盖写
      * @return
      */
-    public static void writeToFile(String path, String fileName, byte[] inputData,int len,boolean append) {
+    public static void writeToFile(String path, String fileName, byte[] inputData, int len, boolean append) {
         File myFile = new File(path + File.separator + fileName);
         FileOutputStream fos = null;
         BufferedOutputStream bos = null;
@@ -113,22 +140,23 @@ public class ToolUtils {
             //fos = new FileOutputStream(myFile);  //覆盖写
             fos = new FileOutputStream(myFile, append);  //续写
             bos = new BufferedOutputStream(fos);
-            bos.write(inputData,0,len);
+            bos.write(inputData, 0, len);
             bos.close();
             fos.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
-    public static void writeToFile(String path, String fileName, byte[] inputData){
-        writeToFile(path, fileName,inputData,inputData.length,false);
+
+    public static void writeToFile(String path, String fileName, byte[] inputData) {
+        writeToFile(path, fileName, inputData, inputData.length, false);
     }
 
 
     //读取文件
-    public static byte[] readFile(String filePath){
+    public static byte[] readFile(String filePath) {
         File file = new File(filePath);
-        if(!file.exists()){
+        if (!file.exists()) {
             return null;
         }
         byte[] buffer = null;
@@ -204,6 +232,7 @@ public class ToolUtils {
 
     /**
      * copy文件
+     *
      * @param source
      * @param target
      */
@@ -226,20 +255,22 @@ public class ToolUtils {
     }
 
     //删除文件或文件夹
-    public static void deleteFile(String filePath){
+    public static void deleteFile(String filePath) {
         File file = new File(filePath);
         if (file.exists()) {
             file.delete();// 删除
         }
     }
-    public static void deleteFile(File file){
+
+    public static void deleteFile(File file) {
         deleteFile(file.getPath());
     }
 
-    public static void deleteDir(String folderPath){
+    public static void deleteDir(String folderPath) {
         com.example.zpc.file.util.Utils.deleteDir(folderPath);
     }
-    public static void deleteDir(File folder){
+
+    public static void deleteDir(File folder) {
         deleteDir(folder.getPath());
     }
 }

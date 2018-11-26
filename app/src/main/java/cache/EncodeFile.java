@@ -52,6 +52,9 @@ public class EncodeFile {
     @XStreamOmitField
     private static EncodeFile encodeFileSingleton = new EncodeFile();
 
+    @XStreamOmitField
+    private boolean initSuccess = false;  //判断当前恩encodefile是否可用
+
     private EncodeFile(File file, int K, String runModeString) {
         init(file, K, runModeString);
     }
@@ -66,12 +69,14 @@ public class EncodeFile {
 
     public static void updateSingleton(File file, int K, String runModeString) {
         encodeFileSingleton = new EncodeFile(file, K, runModeString);
+        encodeFileSingleton.initSuccess = true;
     }
 
     public static void updateSingleton(String xmlFilePath) {
         File file = new File(xmlFilePath);
         if (file.exists()) {
             encodeFileSingleton = xml2obj(xmlFilePath);
+            encodeFileSingleton.initSuccess = true;
             String className = encodeFileSingleton.partFileVector.get(0).getClass().getName();
             Log.e("hanhai", className);
         }
@@ -80,6 +85,7 @@ public class EncodeFile {
     //根据其他手机的encodeFile查找或生成本机的配置对象
     public static void updateSingleton(EncodeFile itsEncodeFile) {
         getLocalCache(itsEncodeFile);
+        encodeFileSingleton.initSuccess = true;
     }
 
 
@@ -107,7 +113,6 @@ public class EncodeFile {
             int startPos = (i - 1) * partLen;
             PartFile partFile = PartFileFactory.createPartFile(runModeString);
             partFile.initPartFile(folderPath, i, K, AndroidId, file, startPos, len);
-            partFile.reencodePartFile();
             partFileVector.add(partFile);
         }
 
@@ -119,7 +124,7 @@ public class EncodeFile {
     }
 
     //把对象保存在xml文件中
-    private void object2xml() {
+    private synchronized void object2xml() {
         //设置xml字段顺序
         SortableFieldKeySorter sorter = new SortableFieldKeySorter();
         sorter.registerFieldOrder(EncodeFile.class,
@@ -134,7 +139,8 @@ public class EncodeFile {
                         "runModeString",
                         "partFileVector",
                         "xmlFileName",
-                        "encodeFileSingleton"
+                        "encodeFileSingleton",
+                        "initSuccess"
                 });
 
         sorter.registerFieldOrder(PartFile.class,
@@ -209,29 +215,31 @@ public class EncodeFile {
     }
 
     //如果本地不存在此文件信息则创建
-    private static EncodeFile getLocalCache(EncodeFile encodeFile) {
-        String folderPath = encodeFile.folderPath;
+    private static EncodeFile getLocalCache(EncodeFile itsEncodeFile) {
+        String folderPath = itsEncodeFile.folderPath;
         //当前就是此对象
-        if (encodeFileSingleton.folderPath.equals(folderPath)) {
+        if (encodeFileSingleton.initSuccess &&
+                encodeFileSingleton.folderPath.equals(folderPath)) {
             return encodeFileSingleton;
         }
-        File folder = new File(folderPath);
-        if (folder.exists()) {
-            String xmlFilePath = folderPath + File.separator + xmlFileName;
+
+        String xmlFilePath = folderPath + File.separator + xmlFileName;
+        File xmlFile = new File(xmlFilePath);
+        if (xmlFile.exists()) {
             encodeFileSingleton = xml2obj(xmlFilePath);
         } else {
             EncodeFile newEncodeFile = new EncodeFile();
-            newEncodeFile.fileName = encodeFile.fileName;
-            newEncodeFile.fileLen = encodeFile.fileLen;
-            newEncodeFile.folderPath = encodeFile.folderPath;
+            newEncodeFile.fileName = itsEncodeFile.fileName;
+            newEncodeFile.fileLen = itsEncodeFile.fileLen;
+            newEncodeFile.folderPath = itsEncodeFile.folderPath;
             ToolUtils.createFolder(newEncodeFile.folderPath);
-            newEncodeFile.partNum = encodeFile.partNum;
-            newEncodeFile.AndroidId = encodeFile.AndroidId;
-            newEncodeFile.K = encodeFile.K;
-            newEncodeFile.runModeString = encodeFile.runModeString;
+            newEncodeFile.partNum = itsEncodeFile.partNum;
+            newEncodeFile.AndroidId = itsEncodeFile.AndroidId;
+            newEncodeFile.K = itsEncodeFile.K;
+            newEncodeFile.runModeString = itsEncodeFile.runModeString;
             newEncodeFile.currentPieceNum = 0;
             //处理partFile
-            for (PartFile partFile : encodeFile.partFileVector) {
+            for (PartFile partFile : itsEncodeFile.partFileVector) {
                 PartFile newPartFile = PartFileFactory.createPartFile(newEncodeFile.runModeString);
                 //创建存储路径
                 newPartFile.initPartFile(partFile, newEncodeFile.folderPath);
@@ -278,12 +286,19 @@ public class EncodeFile {
         for (PartFile partFile : partFileVector) {
             if (partFile.partNo == partNo) {
                 boolean flag = partFile.saveFile(socketMsgContent.file, socketMsgContent.fileName);
-                if (flag) updateCurrentPieceNum();
+                if (flag) {
+                    updateCurrentPieceNum();
+                    // 更新xml
+                    object2xml();
+                    // 尝试解码恢复文件
+                    recover();
+                }
                 //删除临时文件
                 ToolUtils.deleteFile(socketMsgContent.file);
                 break;
             }
         }
+
     }
 
     //获取文件请求信息
@@ -304,20 +319,37 @@ public class EncodeFile {
         return requestVector;
     }
 
-    //获取到待发送的文件
-    public File getSendFile(SocketMsgContent socketMsgContent) {
-        byte[] requestBytes = socketMsgContent.requestBytes;
-        int partNo = (int) requestBytes[0];
+    /**
+     * 获取到待发送的文件
+     *
+     * @return
+     */
+    public File getSendFile(int partNo, byte[] request) {
         PartFile partFile = null;
         for (PartFile partFile1 : partFileVector) {
-            if(partFile1.partNo == partNo){
+            if (partFile1.partNo == partNo) {
                 partFile = partFile1;
+                break;
             }
         }
-
-        File file = partFile.getSendFile(socketMsgContent.requestBytes);
-
+        File file = partFile.getSendFile(request);
         return file;
+    }
+
+    public void afterSendFile(int partNo, File file) {
+        for (PartFile partFile : partFileVector) {
+            if (partFile.partNo == partNo) {
+                partFile.afterSendFile(file);
+            }
+        }
+    }
+
+    public int getK() {
+        return K;
+    }
+
+    public String getRunModeString() {
+        return runModeString;
     }
 
     //更新文件片数

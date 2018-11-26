@@ -107,13 +107,13 @@ public class MySocket {
             /**
              * 分支一  文件请求
              */
-            if (socketMsgContent.code == 1) {
+            if (socketMsgContent.code == SocketMsgContent.CODE_FILE_REQUEST) {
                 socketMsgContent.requestLen = dis.readInt();
                 byte[] bytes = new byte[socketMsgContent.requestLen];
                 dis.readFully(bytes);
                 socketMsgContent.requestBytes = bytes;
 
-            } else if (socketMsgContent.code == 2) {
+            } else if (socketMsgContent.code == SocketMsgContent.CODE_XML_PART_FILE) {
                 /**
                  * 分支二  接收xml文件或是partfile
                  */
@@ -122,9 +122,10 @@ public class MySocket {
 
                 socketMsgContent.fileName = dis.readUTF();
                 socketMsgContent.file = receiveFile(dis, data, socketMsgContent.fileLen);
-            }else if(socketMsgContent.code == 3){
+            }else if(socketMsgContent.code == SocketMsgContent.CODE_LEAVE ||
+                    socketMsgContent.code == SocketMsgContent.CODE_ANSWER_END){
                 /**
-                 * 分支三 执行的是离开
+                 * 分支三 执行的是离开 或是 一次对方一次文件应答结束
                  */
             }
             socketMsgParse.parse(socketMsgContent);
@@ -157,6 +158,9 @@ public class MySocket {
     }
 
     public void sendSocketMsgContent(SocketMsgContent socketMsgContent) {
+        if(socketMsgContent == null) {
+            return;
+        }
         try {
             DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
             dos.writeInt(socketMsgContent.serveOrClient);
@@ -165,21 +169,22 @@ public class MySocket {
             /**
              * 分支一  文件请求
              */
-            if (socketMsgContent.code == 1) {
+            if (socketMsgContent.code == SocketMsgContent.CODE_FILE_REQUEST) {
                 dos.writeInt(socketMsgContent.requestLen);
                 dos.write(socketMsgContent.requestBytes);
 
-            } else if (socketMsgContent.code == 0 || socketMsgContent.code == 2) {
+            } else if (socketMsgContent.code == SocketMsgContent.CODE_XML_PART_FILE) {
                 /**
-                 * 分支二  接收xml文件或是partfile
+                 * 分支二  发送xml文件或是partfile
                  */
                 dos.writeInt(socketMsgContent.partNo);
                 dos.writeInt(socketMsgContent.fileLen);
                 dos.writeUTF(socketMsgContent.fileName);
                 sendFile(socketMsgContent.file);
-            }else if (socketMsgContent.code == 3){
+            }else if(socketMsgContent.code == SocketMsgContent.CODE_LEAVE ||
+                    socketMsgContent.code == SocketMsgContent.CODE_ANSWER_END){
                 /**
-                 * 分支三  执行的是离开
+                 * 分支三  执行的是离开 或是 一次文件应答结束
                  */
             }
         } catch (IOException e) {

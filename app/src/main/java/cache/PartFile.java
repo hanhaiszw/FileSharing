@@ -10,10 +10,14 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Vector;
 
 import nc.NCUtils;
 import utils.MyByteBuffer;
+import utils.MyThreadPool;
 import utils.ToolUtils;
 
 
@@ -187,18 +191,7 @@ abstract class PartFile {
 
         // 2 再计算秩
         //获取文件的编码系数
-        byte[] bytes = new byte[K];
-        try {
-            RandomAccessFile af = new RandomAccessFile(file, "r");
-            //跳过第一个字节
-            af.skipBytes(1);  //
-            af.readFully(bytes);
-
-            af.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-            return false;
-        }
+        byte[] bytes = getFileCoef(file);
 
         // 计算秩
         int row = coefMatrix.size();
@@ -214,6 +207,7 @@ abstract class PartFile {
         }
 
         int rank = NCUtils.getRank(bt_coef);
+        // rank == row + 1
         if (rank > row) {
             File newFile = ToolUtils.createFile(pieceFilePath, fileName);
             ToolUtils.copyFile(file, newFile);
@@ -252,16 +246,17 @@ abstract class PartFile {
             Vector<int[]> vCoef = new Vector<>(row + 1);
             for (int i = 0; i < row; i++) {
                 int[] array = coefMatrix.get(i);
-                vCoef.setElementAt(array, i);
+                vCoef.add(array);
             }
             for (int[] array : itsCoefMat) {
-                vCoef.setElementAt(array, row);
+                vCoef.add(array);
                 byte[][] bt_coef = intArrVector2byteArray(vCoef);
                 int rank = NCUtils.getRank(bt_coef);
                 if (rank == row + 1) {
                     ret = array;
                     break;
                 }
+                vCoef.remove(row);
             }
         }
         if (ret == null) {
@@ -271,10 +266,64 @@ abstract class PartFile {
             //第一个字节存放partNo
             requestCoef[0] = (byte) partNo;
             for (int i = 0; i < K; i++) {
-                requestCoef[i+1] = (byte) ret[i];
+                requestCoef[i + 1] = (byte) ret[i];
             }
             return requestCoef;
         }
+    }
+
+    /**
+     * 获取待发送的文件
+     *
+     * @param request
+     * @return
+     */
+    //因为OD下 RS下都会用到这种方法 所以在父类定义
+    public File getODSendFile(byte[] request) {
+        byte[] itsCoef = new byte[K];
+        for (int i = 0; i < K; i++) {
+            itsCoef[i] = request[i + 1];
+        }
+        Vector<File> files = ToolUtils.getUnderFiles(pieceFilePath);
+
+        for (File file : files) {
+            byte[] coef = getFileCoef(file);
+            if (Arrays.equals(itsCoef, coef)) {
+                return file;
+            }
+        }
+        return null;
+    }
+
+    //因为NC下 RS下都会用到这种方法 所以在父类定义
+    public File getNCSendFile(byte[] request) {
+        Vector<File> files = ToolUtils.getUnderFiles(reencodeFilePath);
+        File file = null;
+        if (files.size() == 0) {
+            file = reencodePartFile();
+        } else {
+            //对文件进行排序  取最新的文件
+            ToolUtils.fileDesSort(files);
+            file = files.get(0);
+        }
+        //再生成一个再编码文件
+        //recoverPartFile();
+        return file;
+    }
+
+    /**
+     * 发送后处理已经发送的文件
+     * @param file
+     */
+    public void afterODSendFile(File file){
+        //什么都不做
+    }
+
+    public void afterNCSendFile(File file){
+        // 删除再编码文件
+        ToolUtils.deleteFile(file);
+        // 重开线程 再编码
+        MyThreadPool.execute(() -> reencodePartFile());
     }
 
     private File encodeCore(String NCUtilsMethodsName, int retLen, String filePath, Encode_Core_Mode encode_core_mode) {
@@ -353,19 +402,34 @@ abstract class PartFile {
         return ret;
     }
 
-
-    //因为OD下 RS下都会用到这种方法 所以在父类定义
-    public File getODSendFile(byte[] coef){
-
+    /**
+     * 获取文件的编码系数
+     *
+     * @param file
+     * @return
+     */
+    private byte[] getFileCoef(File file) {
+        //获取文件的编码系数
+        byte[] bytes = new byte[K];
+        try {
+            RandomAccessFile af = new RandomAccessFile(file, "r");
+            //跳过第一个字节
+            af.skipBytes(1);  //K值
+            af.readFully(bytes);
+            af.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return bytes;
     }
 
-    //因为NC下 RS下都会用到这种方法 所以在父类定义
-    public File getNCSendFile(byte[] coef){
 
-    }
-
-
+    // 获取发送文件 和 发送后处理已经发送的文件
+    // OD 保留
+    // NC 删除
+    // RS 删除或者保留
     public abstract File getSendFile(byte[] coef);
+    public abstract void afterSendFile(File file);
 }
 
 //encodeCore方法运行的两种方式
