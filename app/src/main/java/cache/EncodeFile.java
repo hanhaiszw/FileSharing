@@ -13,11 +13,11 @@ import com.thoughtworks.xstream.io.xml.DomDriver;
 
 import java.io.File;
 import java.util.Vector;
-import java.util.concurrent.ThreadPoolExecutor;
 
 import connect.SocketMsgContent;
 import data.CachePath;
 import data.ConstantData;
+import utils.MyThreadPool;
 import utils.ToolUtils;
 
 //做成单例类
@@ -225,6 +225,9 @@ public class EncodeFile {
 
         String xmlFilePath = folderPath + File.separator + xmlFileName;
         File xmlFile = new File(xmlFilePath);
+
+
+
         if (xmlFile.exists()) {
             encodeFileSingleton = xml2obj(xmlFilePath);
         } else {
@@ -253,8 +256,9 @@ public class EncodeFile {
     }
 
     //恢复文件
-    public synchronized void recover() {
+    public void recover() {
         //如果本机就是文件源，则不执行解码
+        if(!initSuccess) return;
         if (AndroidId.equals(ConstantData.ANDROID_ID)) {
             return;
         }
@@ -262,21 +266,33 @@ public class EncodeFile {
         if (currentPieceNum < partNum * K) {
             return;
         }
-        File[] files = new File[partNum];
 
-        for (PartFile partFile : partFileVector) {
-            File file = partFile.recoverPartFile();
-            if (file == null)
-                return;
-            int index = partFile.partNo - 1;
-            files[index] = file;
+        //文件已经被恢复了
+        if(ToolUtils.isFileExists(folderPath,fileName)){
+            return;
         }
 
+        //开始解码恢复文件
+        MyThreadPool.execute(() -> {
+            Log.d("hanhai", "开始恢复数据");
 
-        String outFilePath = folderPath + File.separator + fileName;
-        ToolUtils.mergeFiles(outFilePath, files);
+            File[] files = new File[partNum];
 
-        Log.d("hanhai", "恢复数据成功");
+            for (PartFile partFile : partFileVector) {
+                File file = partFile.decodePartFile();
+                if (file == null)
+                    return;
+                int index = partFile.partNo - 1;
+                files[index] = file;
+            }
+
+            String outFilePath = folderPath + File.separator + fileName;
+            ToolUtils.mergeFiles(outFilePath, files);
+
+            Log.d("hanhai", "恢复数据成功");
+            //ToolUtils.openFile(MainActivity.getContext(),outFilePath);
+        });
+
     }
 
 
@@ -290,7 +306,7 @@ public class EncodeFile {
                     updateCurrentPieceNum();
                     // 更新xml
                     object2xml();
-                    // 尝试解码恢复文件
+                    //
                     recover();
                 }
                 //删除临时文件
@@ -319,6 +335,8 @@ public class EncodeFile {
         return requestVector;
     }
 
+
+
     /**
      * 获取到待发送的文件
      *
@@ -344,6 +362,15 @@ public class EncodeFile {
         }
     }
 
+    //更新文件片数
+    private synchronized void updateCurrentPieceNum() {
+        currentPieceNum += 1;
+    }
+
+    public boolean isInitSuccess() {
+        return initSuccess;
+    }
+
     public int getK() {
         return K;
     }
@@ -352,9 +379,16 @@ public class EncodeFile {
         return runModeString;
     }
 
-    //更新文件片数
-    private synchronized void updateCurrentPieceNum() {
-        currentPieceNum += 1;
+    public int getCurrentPieceNum() {
+        return currentPieceNum;
+    }
+
+    public int getTotalPieceNum() {
+        return K * partNum;
+    }
+
+    public String getFileName() {
+        return fileName;
     }
 
     public String getXmlFilePath() {

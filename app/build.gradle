@@ -4,7 +4,7 @@ android {
     compileSdkVersion 28
     defaultConfig {
         applicationId "com.example.mroot.filesharing"
-        minSdkVersion 15
+        minSdkVersion 16
         targetSdkVersion 28
         versionCode 1
         versionName "1.0"
@@ -53,6 +53,9 @@ dependencies {
     implementation 'com.afollestad.material-dialogs:core:0.9.6.0'
     // permission
     implementation 'com.yanzhenjie:permission:2.0.0-rc12'
-    //支持解析xml文件
+    // 支持解析xml文件
     implementation files('libs/xstream-1.4.7.jar')
+    // 圆形进度球
+    implementation 'com.github.lzyzsd:circleprogress:1.2.1'
+
 }

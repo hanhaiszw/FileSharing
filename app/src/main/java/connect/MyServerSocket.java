@@ -37,7 +37,7 @@ public class MyServerSocket {
             while (true) {
                 try {
                     Socket socket = serverSocket.accept();
-                    MySocket mySocket = new MySocket(socket);
+                    MySocket mySocket = new MySocket(socket, MySocket.SOCKET_SERVER);
                     mySockets.add(mySocket);
 
                     //向连接的客户端发送xml配置文件

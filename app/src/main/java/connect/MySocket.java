@@ -21,14 +21,20 @@ public class MySocket {
     private Socket socket;
     private SocketMsgParse socketMsgParse;
     //private DataInputStream dis;
+    // 0 表示是server
+    // 1 表示是client
+    public final static int SOCKET_SERVER = 0;
+    public final static int SOCKET_CLIENT = 1;
+    private int socketState;
 
-    public MySocket(Socket socket) {
+    public MySocket(Socket socket, int socketState) {
         this.socket = socket;
+        this.socketState = socketState;
         socketMsgParse = new SocketMsgParse(this);
         init();
     }
 
-    public void close(){
+    public void close() {
         try {
             socket.close();
         } catch (IOException e) {
@@ -122,12 +128,15 @@ public class MySocket {
 
                 socketMsgContent.fileName = dis.readUTF();
                 socketMsgContent.file = receiveFile(dis, data, socketMsgContent.fileLen);
-            }else if(socketMsgContent.code == SocketMsgContent.CODE_LEAVE ||
-                    socketMsgContent.code == SocketMsgContent.CODE_ANSWER_END){
+            } else if (socketMsgContent.code == SocketMsgContent.CODE_LEAVE ||
+                    socketMsgContent.code == SocketMsgContent.CODE_ANSWER_END) {
                 /**
                  * 分支三 执行的是离开 或是 一次对方一次文件应答结束
                  */
             }
+
+            // 送去解析数据  这里不应该重开线程
+            // MyThreadPool.execute(() -> socketMsgParse.parse(socketMsgContent));
             socketMsgParse.parse(socketMsgContent);
         } catch (IOException e) {
             e.printStackTrace();
@@ -158,7 +167,7 @@ public class MySocket {
     }
 
     public void sendSocketMsgContent(SocketMsgContent socketMsgContent) {
-        if(socketMsgContent == null) {
+        if (socketMsgContent == null) {
             return;
         }
         try {
@@ -181,8 +190,8 @@ public class MySocket {
                 dos.writeInt(socketMsgContent.fileLen);
                 dos.writeUTF(socketMsgContent.fileName);
                 sendFile(socketMsgContent.file);
-            }else if(socketMsgContent.code == SocketMsgContent.CODE_LEAVE ||
-                    socketMsgContent.code == SocketMsgContent.CODE_ANSWER_END){
+            } else if (socketMsgContent.code == SocketMsgContent.CODE_LEAVE ||
+                    socketMsgContent.code == SocketMsgContent.CODE_ANSWER_END) {
                 /**
                  * 分支三  执行的是离开 或是 一次文件应答结束
                  */
@@ -193,6 +202,10 @@ public class MySocket {
 
     }
 
+    // 判断是不是由client端创建的socket
+    public boolean isClientSocket() {
+        return socketState == SOCKET_CLIENT;
+    }
 
     public void sendMsg(String msg) {
         try {

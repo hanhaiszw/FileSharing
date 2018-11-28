@@ -1,10 +1,7 @@
 package utils;
 
 
-import android.util.Log;
-
 import java.util.Vector;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * 为了避免程序中不断申请释放大数组，这里申请几个放在这里
@@ -27,37 +24,47 @@ public class MyByteBuffer {
 
     //获取buffer
     public static byte[] getBuffer(int len) throws Exception {
-        Vector<BufferWithLock> bufferWithLocks;
-        if (len <= 1 * 1024 * 1024) {
-            return new byte[len];
-        } else if (len <= SMALL_SIZE) {
-            bufferWithLocks = bufferWithLocks_3;
-        } else if (len <= BIG_SIZE) {
-            bufferWithLocks = bufferWithLocks_11;
-        } else {
-            return new byte[len];
-        }
+        return new byte[len];
 
-        //有可能卡死在此处
-        //需要设置超时 跳出
-        long startTime = System.currentTimeMillis();
-        while (true) {
-            for (int i = 0; i < bufferWithLocks.size(); i++) {
-                BufferWithLock bufferWithLock = bufferWithLocks.get(i);
-                if (bufferWithLock.bufferTryLock()) {
-                    Log.e("hanhai", "获取到" + i + "下标buffer");
+//        Vector<BufferWithLock> bufferWithLocks;
+//        String flag_size = "";
+//        if (len <= 1 * 1024 * 1024) {
+//            return new byte[len];
+//        } else if (len <= SMALL_SIZE) {
+//            bufferWithLocks = bufferWithLocks_3;
+//            flag_size = "3M小数组";
+//        } else if (len <= BIG_SIZE) {
+//            bufferWithLocks = bufferWithLocks_11;
+//            flag_size = "11M大数组";
+//        } else {
+//            Log.e("hanhai", "获取到长度为len的自定义数组");
+//            return new byte[len];
+//        }
+//
+//        //有可能卡死在此处
+//        //需要设置超时 跳出
+//        long startTime = System.currentTimeMillis();
+//        while (true) {
+//            for (int i = 0; i < bufferWithLocks.size(); i++) {
+//                BufferWithLock bufferWithLock = bufferWithLocks.get(i);
+//                if (bufferWithLock.bufferTryLock()) {
+//
+//                    Log.e("hanhai", "获取到" + i + "下标  "+flag_size);
+//
+//                    //Log.d("hanhai", "获取到buffer");
+//                    return bufferWithLock.getBuffer();
+//                }
+//            }
+//
+//            // 如果5秒还没获取到buffer，则自定义一个buffer
+//            if (System.currentTimeMillis() - startTime > 5000) {
+//                // 获取到长度为len的自定义数组
+//
+//                Log.e("hanhai", "竞争缓存数组失败  "+"获取到长度为"+len+"的自定义数组");
+//                return new byte[len];
+//            }
 
-                    //Log.d("hanhai", "获取到buffer");
-                    return bufferWithLock.getBuffer();
-                }
-            }
-
-            // 如果5秒还没获取到buffer，则自定义一个buffer
-            if (System.currentTimeMillis() - startTime > 5000) {
-                return new byte[len];
-            }
-
-        }
+       // }
 
     }
 

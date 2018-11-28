@@ -13,6 +13,7 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 import java.util.Vector;
 
 import nc.NCUtils;
@@ -149,8 +150,84 @@ abstract class PartFile {
         }
     }
 
-    //解码  恢复出这部分文件
-    public File recoverPartFile() {
+
+    /**
+     * 重写再编码功能
+     * 把文件分开载入编码
+     * 再分别写入再编码文件
+     *
+     * @return
+     */
+    public File reencodePartFile1() {
+        Vector<File> files = ToolUtils.getUnderFiles(pieceFilePath);
+        int fileSize = files.size();
+        if (files.size() == 1) {
+            return files.get(0);
+        } else if (files.size() == 0) {
+            return null;
+        }
+
+        // 分为1M 1M 编码
+        int len = 1 * 1024 * 1024;
+        if (fileSize > K) fileSize = K;
+        //每次从每个文件中读取的长度
+        int perLen = (int) Math.ceil((float) len / fileSize);
+        // 一次处理的数据总长
+        len = perLen * fileSize;
+        // 可以对每个文件读取几次
+        int parts = (int) Math.ceil((float) pieceFileLen / perLen);
+
+        // 随机矩阵
+        byte[] randomMatrix = new byte[fileSize];
+        Random random = new Random();
+        random.nextBytes(randomMatrix);
+
+        // 一个存数据  一个存结果
+        byte[] data = new byte[len];
+        byte[] result = new byte[perLen];
+
+        // 结果文件
+        File retFile = ToolUtils.createFile(reencodeFilePath,
+                partNo + "_" + ToolUtils.randomString(5) + ".nc");
+        try {
+            RandomAccessFile retAf = new RandomAccessFile(retFile, "rw");
+
+            int restLen = pieceFileLen;
+            for (int i = 0; i < parts; i++) {
+                //可读取字节数
+                int readLen = perLen > restLen ? restLen : perLen;
+                int startPos = i * perLen;
+                for (int j = 0; j < fileSize; j++) {
+                    // 从一个文件中每次读取perLen长度的内容
+                    RandomAccessFile af = new RandomAccessFile(files.get(j), "r");
+                    af.seek(startPos);
+                    int startData = j * readLen;
+                    af.readFully(data, startData, readLen);
+                    af.close();
+                }
+                // 再编码
+                NCUtils.Multiply2(randomMatrix, 1, fileSize, data, fileSize, readLen, result);
+                // 剩下的长度
+                restLen -= readLen;
+                // 将结果写入结果文件
+                retAf.write(result, 0, readLen);
+            }
+
+            // 写入K值
+            retAf.seek(0);
+            retAf.writeByte(K);
+
+            retAf.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+            ToolUtils.deleteFile(retFile);
+            return null;
+        }
+
+        return retFile;
+    }
+
+    public synchronized File decodePartFile() {
         //写入文件
         String filePath = partFilePath + File.separator + partNo + ".org";
 
@@ -160,28 +237,87 @@ abstract class PartFile {
         }
 
         Vector<File> files = ToolUtils.getUnderFiles(pieceFilePath);
+        //Vector<File> files = ToolUtils.getUnderFiles(reencodeFilePath);
         if (files.size() < K) {
             return null;
         }
 
-        return encodeCore(NCUtils.DECODE_METHOD_NAME,
-                pieceFileLen * K, filePath, Encode_Core_Mode.RECOVER_MODE);
-    }
+        // 从文件中读取编码系数
+        byte[] coef = new byte[K * K];
+        for (int i = 0; i < K; i++) {
+            try {
+                RandomAccessFile af = new RandomAccessFile(files.get(i), "r");
+                af.seek(1);
+                af.readFully(coef, i * K, K);
+                af.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+                return null;
+            }
+        }
 
-    //再编码功能
-    public File reencodePartFile() {
-        Vector<File> files = ToolUtils.getUnderFiles(pieceFilePath);
-        if (files.size() == 1) {
-            return files.get(0);
-        } else if (files.size() == 0) {
+        //计算系数矩阵的逆矩阵
+        byte[] invMatrix = NCUtils.InverseMatrix(coef, K);
+
+        // 分为1M 1M 编码
+        int len = 1 * 1024 * 1024;
+        //每次从每个文件中读取的长度
+        int perLen = (int) Math.ceil((float) len / K);
+        // 一次处理的数据总长
+        len = perLen * K;
+        // 可以对每个文件读取几次
+        int realFileLen = pieceFileLen - 1 - K;
+        int parts = (int) Math.ceil((float) realFileLen / perLen);
+
+        // 一个存数据  一个存结果
+        byte[] data = new byte[len];
+        byte[] result = new byte[len];
+
+
+        // 结果文件
+        File retFile = ToolUtils.createFile(filePath);
+        try {
+            RandomAccessFile retAf = new RandomAccessFile(retFile, "rw");
+            retAf.setLength(K * realFileLen);
+
+            int restLen = realFileLen;
+            for (int i = 0; i < parts; i++) {
+                //可读取字节数
+                int readLen = perLen > restLen ? restLen : perLen;
+                int startPos = i * perLen;
+                for (int j = 0; j < K; j++) {
+                    // 从一个文件中每次读取perLen长度的内容
+                    RandomAccessFile af = new RandomAccessFile(files.get(j), "r");
+                    af.seek(startPos + 1 + K);  //直接除去编码系数部分
+                    int startData = j * readLen;
+                    af.readFully(data, startData, readLen);
+                    af.close();
+                }
+                // 再编码
+                NCUtils.Multiply2(invMatrix, K, K, data, K, readLen, result);
+                // 剩下的长度
+                restLen -= readLen;
+                // 将结果写入结果文件
+                for (int j = 0; j < K; j++) {
+                    int start = startPos + j * realFileLen;
+                    retAf.seek(start);
+                    retAf.write(result, j * readLen, readLen);
+                }
+            }
+
+            // 截断文件长度  去除尾部的0
+            retAf.setLength(partFileLen);
+
+            retAf.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+            ToolUtils.deleteFile(retFile);
             return null;
         }
 
-        String filePath = reencodeFilePath + File.separator +
-                (partNo + "_" + ToolUtils.randomString(5) + ".nc");
-        return encodeCore(NCUtils.REENCODE_METHOD_NAME,
-                pieceFileLen, filePath, Encode_Core_Mode.REENCODE_MODE);
+        return retFile;
     }
+
 
     //保存文件
     public boolean saveFile(File file, String fileName) {
@@ -296,98 +432,39 @@ abstract class PartFile {
     }
 
     //因为NC下 RS下都会用到这种方法 所以在父类定义
+    //此方法需要同步
+    //需要保证取到的文件不同，文件发送后，还需要删除
     public File getNCSendFile(byte[] request) {
-        Vector<File> files = ToolUtils.getUnderFiles(reencodeFilePath);
-        File file = null;
-        if (files.size() == 0) {
-            file = reencodePartFile();
-        } else {
-            //对文件进行排序  取最新的文件
-            ToolUtils.fileDesSort(files);
-            file = files.get(0);
-        }
+//        Vector<File> files = ToolUtils.getUnderFiles(reencodeFilePath);
+//        File file = null;
+//        if (files.size() == 0) {
+//            file = reencodePartFile();
+//        } else {
+//            //对文件进行排序  取最新的文件
+//            ToolUtils.fileDesSort(files);
+//            file = files.get(0);
+//        }
         //再生成一个再编码文件
         //recoverPartFile();
-        return file;
+        return reencodePartFile1();
     }
 
     /**
      * 发送后处理已经发送的文件
+     *
      * @param file
      */
-    public void afterODSendFile(File file){
+    public void afterODSendFile(File file) {
         //什么都不做
     }
 
-    public void afterNCSendFile(File file){
+    public void afterNCSendFile(File file) {
         // 删除再编码文件
         ToolUtils.deleteFile(file);
         // 重开线程 再编码
-        MyThreadPool.execute(() -> reencodePartFile());
+        //MyThreadPool.execute(() -> reencodePartFile());
     }
 
-    private File encodeCore(String NCUtilsMethodsName, int retLen, String filePath, Encode_Core_Mode encode_core_mode) {
-        Vector<File> files = ToolUtils.getUnderFiles(pieceFilePath);
-        byte[] result = null;
-        byte[] buffer = null;
-        try {
-            int size = files.size();
-            if (size > K) size = K;
-            buffer = MyByteBuffer.getBuffer(pieceFileLen * size);
-            //byte[] buffer = new byte[len];
-            for (int i = 0; i < size; i++) {
-                File file = files.get(i);
-                RandomAccessFile af = new RandomAccessFile(file, "r");
-                //读取整个文件放在buffer字节数组中
-                af.readFully(buffer, i * pieceFileLen, pieceFileLen);
-                af.close();
-            }
-            //解码   带有K + 单位矩阵 的数据
-            result = MyByteBuffer.getBuffer(retLen);
-
-            //
-            //NCUtils.decode(buffer, K, pieceFileLen,result);
-            //反射
-            String className = NCUtils.CLASS_NAME; //这里注意了，是：包名.类名，只写类名会出问题的哦
-            Class<?> testClass = Class.forName(className);
-            //byte[] encodeData, int row, int col, byte[] result
-            Method saddMethod2 = testClass.getMethod(NCUtilsMethodsName,
-                    byte[].class, int.class, int.class, byte[].class);
-            saddMethod2.invoke(null, buffer, K, pieceFileLen, result);
-
-            //
-            File retFile = ToolUtils.createFile(filePath);
-            RandomAccessFile af = new RandomAccessFile(retFile, "rw");
-
-            //写入文件方式分为两种
-            // 1 恢复文件写入方式
-            if (encode_core_mode == Encode_Core_Mode.RECOVER_MODE) {
-                int realLen = partFileLen;
-                for (int i = 0; i < K; i++) {
-                    //为了去除预处理文件时补充的零
-                    int writeLen = pieceFileLen - 1 - K;
-                    if (writeLen > realLen) {
-                        writeLen = realLen;
-                    }
-                    af.write(result, i * pieceFileLen + 1 + K, writeLen);
-                    realLen -= writeLen;
-                }
-            } else if (encode_core_mode == Encode_Core_Mode.REENCODE_MODE) {
-                //再编码文件写入方式  一定要写清操作的数据范围
-                af.write(result, 0, retLen);
-            }
-
-            af.close();
-            return retFile;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        } finally {
-            //释放buffer
-            MyByteBuffer.releaseBuffer(buffer);
-            MyByteBuffer.releaseBuffer(result);
-        }
-    }
 
     private byte[][] intArrVector2byteArray(Vector<int[]> intArrVector) {
         int row = intArrVector.size();
@@ -429,10 +506,6 @@ abstract class PartFile {
     // NC 删除
     // RS 删除或者保留
     public abstract File getSendFile(byte[] coef);
-    public abstract void afterSendFile(File file);
-}
 
-//encodeCore方法运行的两种方式
-enum Encode_Core_Mode {
-    RECOVER_MODE, REENCODE_MODE
+    public abstract void afterSendFile(File file);
 }

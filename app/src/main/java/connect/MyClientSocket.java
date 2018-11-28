@@ -17,7 +17,7 @@ public class MyClientSocket {
     public void connect(String ip, int port) {
         try {
             Socket socket = new Socket(ip, port);
-            mySocket = new MySocket(socket);
+            mySocket = new MySocket(socket,MySocket.SOCKET_CLIENT);
             //Socket socket = new Socket();
             //socket.connect(new InetSocketAddress(ip, port), 3000);//设置连接请求超时时间10 s
 

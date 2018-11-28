@@ -2,21 +2,24 @@ package com.example.mroot.filesharing;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.text.InputType;
+import android.text.Layout;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.afollestad.materialdialogs.DialogAction;
 import com.afollestad.materialdialogs.MaterialDialog;
+import com.github.lzyzsd.circleprogress.CircleProgress;
 import com.leon.lfilepickerlibrary.LFilePicker;
 import com.mauiie.aech.AECHConfiguration;
 import com.mauiie.aech.AECrashHelper;
@@ -30,6 +33,7 @@ import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
 import cache.EncodeFile;
+
 import connect.ConnectConstant;
 import connect.MyClientSocket;
 import connect.MyServerSocket;
@@ -37,17 +41,35 @@ import data.CachePath;
 import data.MsgType;
 import data.RunMode;
 import nc.NCUtils;
-import utils.MyByteBuffer;
 import utils.MyThreadPool;
 import wifi.WifiAPControl;
 
 
 public class MainActivity extends AppCompatActivity {
 
-    @BindView(R.id.sample_text)
-    TextView tv;
+    @BindView(R.id.sv_prompt)
+    ScrollView scrollView;
+    @BindView(R.id.tv_prompt)
+    TextView tv_prompt;
+
+    @BindView(R.id.tv_fileName)
+    TextView tv_fileName;
+
+    /**
+     * 0 代表是提示信息模式
+     * 1 代表是圆形进度模式
+     */
+    private final int PROMPT_VIEW = 0;
+    private final int WAVEPROGRESS_VIEW = 1;
+    private int viewState;
+    @BindView(R.id.layout_wavePro)
+    LinearLayout layout_wavePro;
+
+    @BindView(R.id.circle_progress)
+    CircleProgress circleProgress;
+
     private long exitTime = 0;
-    private int REQUESTCODE_FROM_ACTIVITY = 1000;
+    private int REQUEST_CODE_FROM_ACTIVITY = 1000;
     private static Context context;
 
     private WifiAPControl wifiAPControl;
@@ -55,8 +77,6 @@ public class MainActivity extends AppCompatActivity {
     private MyServerSocket myServerSocket;
     private MyClientSocket myClientSocket;
 
-    //网络编码中的GenerationSize
-    // private int K;
 
     private static RunMode runMode;
 
@@ -68,7 +88,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
         context = MainActivity.this;
-        //tv.setText("hello");
+        mainActivity = this;
 
         requestPermissions();
 
@@ -79,9 +99,13 @@ public class MainActivity extends AppCompatActivity {
                         .setSaveToLocal(true).build()   //开启存储在本地功能
         );
 
-        init();
-        mainActivity = this;
 
+        //滚动到最下面
+        scrollView.getViewTreeObserver().addOnGlobalLayoutListener(() ->
+                scrollView.post(() -> scrollView.fullScroll(View.FOCUS_DOWN)));
+
+        viewState = PROMPT_VIEW;
+        init();
     }
 
     private void init() {
@@ -93,8 +117,7 @@ public class MainActivity extends AppCompatActivity {
         runMode.initRunMode(context);
 
         EncodeFile.updateSingleton(runMode.lastXMLFilePath);
-        setTitle(runMode.runModeString);
-
+        sendMsg2UIThread(MsgType.ENCODE_FILE_CHANGE.ordinal(),"");
     }
 
 
@@ -102,7 +125,7 @@ public class MainActivity extends AppCompatActivity {
     public void selectFile() {
         new LFilePicker()
                 .withActivity(MainActivity.this)
-                .withRequestCode(REQUESTCODE_FROM_ACTIVITY)
+                .withRequestCode(REQUEST_CODE_FROM_ACTIVITY)
                 .withStartPath(runMode.selectStartPath)
                 .withMutilyMode(false)
                 .start();
@@ -126,7 +149,6 @@ public class MainActivity extends AppCompatActivity {
 
     @OnClick(R.id.btn_test)
     public void test1() {
-        EncodeFile.getSingleton().recover();
 //        try {
 //            for (int i = 0; i < 5; i++) {
 //                byte[] bytes = MyByteBuffer.getBuffer(10 *1024*1024);
@@ -136,6 +158,27 @@ public class MainActivity extends AppCompatActivity {
 //        } finally {
 //
 //        }
+//        for (int i = 0; i < 100; i++) {
+//            sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(), "hello, world!");
+//
+//        }
+        //scrollView.fullScroll(ScrollView.FOCUS_DOWN);
+
+        EncodeFile.getSingleton().recover();
+    }
+
+    @OnClick(R.id.btn_switch_view)
+    public void switch_view() {
+        if (viewState == PROMPT_VIEW) {
+            scrollView.setVisibility(View.GONE);
+            layout_wavePro.setVisibility(View.VISIBLE);
+            viewState = WAVEPROGRESS_VIEW;
+
+        } else if (viewState == WAVEPROGRESS_VIEW) {
+            scrollView.setVisibility(View.VISIBLE);
+            layout_wavePro.setVisibility(View.GONE);
+            viewState = PROMPT_VIEW;
+        }
     }
 
 
@@ -147,15 +190,12 @@ public class MainActivity extends AppCompatActivity {
             MsgType msgType = MsgType.values()[msg.what];
             switch (msgType) {
                 case SHOW_MSG:
-                    Toast.makeText(context, msg.obj.toString(), Toast.LENGTH_SHORT).show();
+                    //Toast.makeText(context, msg.obj.toString(), Toast.LENGTH_SHORT).show();
+                    String prompt = msg.obj.toString() + "\n";
+                    tv_prompt.append(prompt);
                     break;
                 case ENCODE_FILE_CHANGE:
-                    EncodeFile encodeFile = EncodeFile.getSingleton();
-                    runMode.runModeString = encodeFile.getRunModeString();
-                    runMode.K = encodeFile.getK();
-
-                    setTitle(runMode.runModeString);
-
+                    updateEncodeFileInfo();
                     break;
                 default:
                     break;
@@ -169,7 +209,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (resultCode == RESULT_OK) {
-            if (requestCode == REQUESTCODE_FROM_ACTIVITY) {
+            if (requestCode == REQUEST_CODE_FROM_ACTIVITY) {
                 //在这里获取到选择的文件完整路径
                 List<String> list = data.getStringArrayListExtra("paths");
                 //这里用的单选
@@ -202,24 +242,33 @@ public class MainActivity extends AppCompatActivity {
                     MyThreadPool.execute(() -> {
                         Log.d("hanhai", "文件预处理开始");
                         EncodeFile.updateSingleton(file, runMode.K, runMode.runModeString);
-                        //EncodeFile encodeFile = EncodeFile.getSingleton();
-//                    for (int i = 0; i < 10; i++) {
-//                        //初始化待发送文件
-//                        int index = i + 1;
-//
-//                        Log.d("hanhai", "第" + index + "次预处理开始");
-
-
-                        //Log.d("hanhai", "文件预处理开始");
-                        //EncodeFile.updateSingleton(file, runMode.K, runMode.runModeString);
-                        //encodeFile.recover();
-//                        Log.d("hanhai", "第" + index + "次执行结束");
-//                    }
+                        sendMsg2UIThread(MsgType.ENCODE_FILE_CHANGE.ordinal(),"");
                     });
                 })
                 .show();
     }
 
+    private void updateEncodeFileInfo() {
+        EncodeFile encodeFile = EncodeFile.getSingleton();
+        if(!encodeFile.isInitSuccess()){
+            return;
+        }
+        runMode.runModeString = encodeFile.getRunModeString();
+        runMode.K = encodeFile.getK();
+        runMode.lastXMLFilePath = encodeFile.getXmlFilePath();
+
+        setTitle(runMode.runModeString);
+        tv_fileName.setText(encodeFile.getFileName());
+        // 更新进度球
+        int currentPieceNum = encodeFile.getCurrentPieceNum();
+        int totalPieceNum = encodeFile.getTotalPieceNum();
+
+        circleProgress.setFinishedColor(runMode.getRunColor());
+        int progress = (int) ((float)currentPieceNum / totalPieceNum * 100);
+        circleProgress.setProgress(progress);
+        circleProgress.setPrefixText(currentPieceNum + "/" + totalPieceNum + " (");
+        circleProgress.setSuffixText("%)");
+    }
 
     @Override
     public void onBackPressed() {
@@ -227,10 +276,7 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(getApplicationContext(), "再按一次退出程序", Toast.LENGTH_SHORT).show();
             exitTime = System.currentTimeMillis();
         } else {
-            //注意：写在finish后的话，存值失败
-            runMode.lastXMLFilePath = EncodeFile.getSingleton().getXmlFilePath();
-            runMode.commitRunMode(context);
-
+            runMode.commitRunMode(this);
             finish();
             NCUtils.UninitGalois();
             MyThreadPool.shutdownNow();

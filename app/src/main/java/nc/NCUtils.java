@@ -11,7 +11,6 @@ import java.util.Random;
 public class NCUtils {
     // Used to load the 'native-lib' library on application startup.
     static {
-
         System.loadLibrary("native-lib");
         //申请有限域
         InitGalois();
@@ -44,7 +43,7 @@ public class NCUtils {
      * @param result     存放结果的数组
      * @return
      */
-    public static byte[] reencode(byte[] encodeData, int row, int col, byte[] result) {
+    private static byte[] reencode(byte[] encodeData, int row, int col, byte[] result) {
         //1*row 随机矩阵  与  row * col的数据矩阵相乘
         byte[] randomMatrix = new byte[row];
         Random random = new Random();
@@ -66,7 +65,7 @@ public class NCUtils {
      * @param result     存放结果的数组
      * @return
      */
-    public static void decode(byte[] encodeData, int row, int col, byte[] result) {
+    private static void decode(byte[] encodeData, int row, int col, byte[] result) {
         int K = encodeData[0];
         if (row < K) {
             //数据不足，解码失败
@@ -118,10 +117,10 @@ public class NCUtils {
     private static native byte[] Multiply(byte[] matrix1, int row1, int col1, byte[] matrix2, int row2, int col2);
 
     //矩阵相乘
-    private static native void Multiply2(byte[] matrix1, int row1, int col1, byte[] matrix2, int row2, int col2, byte[] ret);
+    public static native void Multiply2(byte[] matrix1, int row1, int col1, byte[] matrix2, int row2, int col2, byte[] ret);
 
     //矩阵求逆
-    private static native byte[] InverseMatrix(byte[] arrayData, int nK);
+    public static native byte[] InverseMatrix(byte[] arrayData, int nK);
 
     //矩阵求秩
     private static native int GetRank(byte[] matrix, int nRow, int nCol);

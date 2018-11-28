@@ -1,13 +1,17 @@
 package cache;
 
+import android.util.Log;
+
 import com.example.mroot.filesharing.MainActivity;
 
 import java.io.File;
+import java.util.Collections;
 import java.util.Vector;
 
 import connect.MySocket;
 import connect.SocketMsgContent;
 import data.MsgType;
+import utils.MyThreadPool;
 import utils.ToolUtils;
 
 /**
@@ -39,10 +43,10 @@ public class SocketMsgParse {
                 break;
             // 2 partFile分片文件
             case SocketMsgContent.CODE_XML_PART_FILE:
-                if(socketMsgContent.partNo == SocketMsgContent.XML_PRATNO){
+                if (socketMsgContent.partNo == SocketMsgContent.XML_PRATNO) {
                     // 处理文件请求
                     solveXMLFile(socketMsgContent);
-                }else{
+                } else {
                     solvePartFile(socketMsgContent);
                 }
                 break;
@@ -62,7 +66,7 @@ public class SocketMsgParse {
 
         // 把改变发给MainActivity
         // 通知MainActivity, EncodeFile单例发生了改变
-        MainActivity.getMainActivity().sendMsg2UIThread(MsgType.ENCODE_FILE_CHANGE.ordinal(),"");
+        MainActivity.getMainActivity().sendMsg2UIThread(MsgType.ENCODE_FILE_CHANGE.ordinal(), "");
 
     }
 
@@ -73,13 +77,17 @@ public class SocketMsgParse {
         //如果是服务器端发送来的xml配置信息，客户端是需要给服务器返回xml配置信息的
         if (socketMsgContent.serveOrClient == SocketMsgContent.SERVER_MSG) {
             EncodeFile.updateSingleton(itsEncodeFile);
-            File file = new File(EncodeFile.getSingleton().getXmlFilePath());
-            SocketMsgContent answer = new SocketMsgContent(
-                    SocketMsgContent.CLIENT_MSG, SocketMsgContent.XML_PRATNO, file);
-            //发送xml文件
-            mySocket.sendSocketMsgContent(answer);
+            //File file = new File(EncodeFile.getSingleton().getXmlFilePath());
+//            SocketMsgContent answer = new SocketMsgContent(
+//                    SocketMsgContent.CLIENT_MSG, SocketMsgContent.XML_PRATNO, file);
+
+            // 这里有可能出问题了
+            // 发送xml文件
+            //mySocket.sendSocketMsgContent(answer);
+        } else if (socketMsgContent.serveOrClient == SocketMsgContent.CLIENT_MSG) {
 
         }
+
         //删除对方的xml文件
         ToolUtils.deleteFile(socketMsgContent.file);
 
@@ -110,18 +118,24 @@ public class SocketMsgParse {
             requestVector.add(request);
         }
 
+        // 打乱顺序
+        // 防止按顺序取partfile
+        Collections.shuffle(requestVector);
+
         for (byte[] request : requestVector) {
             int partNo = (int) request[0];
+            //
+            Log.d("hanhai", "取第" + partNo + "部分数据");
             File file = encodeFile.getSendFile(partNo, request);
             if (file != null) {
                 SocketMsgContent msgContent = new SocketMsgContent(
                         SocketMsgContent.SERVER_CLIENT_MSG, partNo, file);
                 mySocket.sendSocketMsgContent(msgContent);
-                encodeFile.afterSendFile(partNo,file);
+                encodeFile.afterSendFile(partNo, file);
             }
         }
 
-        // 一次文件请求结束
+        // 一次文件请求应答结束  告知对方
         SocketMsgContent msgContent = new SocketMsgContent(
                 SocketMsgContent.SERVER_CLIENT_MSG, SocketMsgContent.CODE_ANSWER_END);
         mySocket.sendSocketMsgContent(msgContent);
@@ -152,15 +166,27 @@ public class SocketMsgParse {
      * 发送文件请求
      */
     private void sendFileQuestInfor() {
-        SocketMsgContent socketMsgContent = new SocketMsgContent();
-        socketMsgContent.serveOrClient = SocketMsgContent.SERVER_CLIENT_MSG;
-
         Vector<byte[]> requestVector = EncodeFile.getSingleton().getFileRequest(itsEncodeFile);
         if (requestVector.size() == 0) {
             //说明对方没有对自己有用的数据
             //离开
+            SocketMsgContent socketMsgContent = new SocketMsgContent();
+            socketMsgContent.serveOrClient = SocketMsgContent.SERVER_CLIENT_MSG;
             socketMsgContent.code = SocketMsgContent.CODE_LEAVE;
+            mySocket.sendSocketMsgContent(socketMsgContent);
             solveLeave();
+
+            // 向server发送xml文件
+            if (mySocket.isClientSocket()) {
+                File file = new File(EncodeFile.getSingleton().getXmlFilePath());
+                SocketMsgContent answer = new SocketMsgContent(
+                        SocketMsgContent.CLIENT_MSG, SocketMsgContent.XML_PRATNO, file);
+
+                // 这里有可能出问题了
+                // 发送xml文件
+                mySocket.sendSocketMsgContent(answer);
+            }
+
         } else {
             int row = requestVector.size();
             int col = requestVector.get(0).length;
@@ -172,13 +198,14 @@ public class SocketMsgParse {
                 }
             }
             //文件请求
+            SocketMsgContent socketMsgContent = new SocketMsgContent();
+            socketMsgContent.serveOrClient = SocketMsgContent.SERVER_CLIENT_MSG;
             socketMsgContent.code = SocketMsgContent.CODE_FILE_REQUEST;
 
             socketMsgContent.requestLen = requestBytes.length;
             socketMsgContent.requestBytes = requestBytes;
+            mySocket.sendSocketMsgContent(socketMsgContent);
         }
-
-        mySocket.sendSocketMsgContent(socketMsgContent);
     }
 
 

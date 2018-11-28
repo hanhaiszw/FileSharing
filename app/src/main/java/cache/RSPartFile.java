@@ -10,7 +10,7 @@ class RSPartFile extends PartFile {
     public void initPartFile(String folderPath, int partNo, int K, String AndroidId, File file, int startPos, int len) {
         super.initPartFile(folderPath, partNo, K, AndroidId, file, startPos, len);
         // 生成再编码文件
-        reencodePartFile();
+        //reencodePartFile();
     }
 
     @Override

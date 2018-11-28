@@ -1,5 +1,6 @@
 package utils;
 
+import android.content.Context;
 import android.os.Environment;
 
 
@@ -252,6 +253,19 @@ public class ToolUtils {
             e.printStackTrace();
         }
 
+    }
+
+
+    /**
+     * 打开文件
+     * @param context
+     * @param aFile
+     */
+    public static void openFile(Context context, File aFile) {
+        com.example.zpc.file.util.Utils.openFile(context, aFile);
+    }
+    public static void openFile(Context context, String aFile) {
+        openFile(context, new File(aFile));
     }
 
     //删除文件或文件夹
