@@ -10,6 +10,7 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -42,7 +43,7 @@ public class MyServerSocket {
             trySwitch2Client();
         } catch (IOException e) {
             e.printStackTrace();
-            if(isOpen){
+            if (isOpen) {
                 System.out.println("serversocket开启成功");
                 // 开始计时
                 acceptStartTime = System.currentTimeMillis();
@@ -83,6 +84,10 @@ public class MyServerSocket {
      */
     public void trySwitch2Client() {
         Timer timer = new Timer();
+        // 加入随机值
+        Random random = new Random();
+        int rnd = random.nextInt(10);
+
         timer.schedule(new TimerTask() {
             @Override
             public void run() {
@@ -94,11 +99,13 @@ public class MyServerSocket {
                     }
                 }
 
+
                 // 当没有client在线  且等待时间超过了10s 则开始尝试切换
-                if(mySockets.size() == 0 &&
-                        System.currentTimeMillis() - acceptStartTime > 10 * 1000){
+                // 10 到 20 秒之间开始切换
+                if (mySockets.size() == 0 &&
+                        System.currentTimeMillis() - acceptStartTime > (10 + rnd) * 1000) {
                     //切换向client
-                    MainActivity.sendMsg2UIThread(MsgType.SERVER_2_CLIENT.ordinal(),"");
+                    MainActivity.sendMsg2UIThread(MsgType.SERVER_2_CLIENT.ordinal(), "");
                     timer.cancel();
                 }
             }

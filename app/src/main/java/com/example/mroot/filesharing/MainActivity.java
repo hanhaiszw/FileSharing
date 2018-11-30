@@ -14,6 +14,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -54,6 +55,11 @@ public class MainActivity extends AppCompatActivity {
 
     @BindView(R.id.tv_fileName)
     TextView tv_fileName;
+
+    @BindView(R.id.btn_openServer)
+    Button btn_openServer;
+    @BindView(R.id.btn_openClient)
+    Button btn_openClient;
 
     /**
      * 0 代表是提示信息模式
@@ -227,12 +233,28 @@ public class MainActivity extends AppCompatActivity {
                 case CLIENT_2_SERVER:
                     wifiAPControl.client2server();
                     break;
+                case SERVER_STATE_FLAG:
+                    setServerFlag();
+                    break;
+                case CLIENT_STATE_FLAG:
+                    setClientFlag();
+                    break;
                 default:
                     break;
             }
             super.handleMessage(msg);
         }
     };
+
+    private void setClientFlag() {
+        btn_openClient.setTextColor(0xffff0000);
+        btn_openServer.setTextColor(0xff000000);
+    }
+
+    private void setServerFlag() {
+        btn_openServer.setTextColor(0xffff0000);
+        btn_openClient.setTextColor(0xff000000);
+    }
 
 
     @Override

@@ -39,6 +39,7 @@ public class WifiAPControl {
     private MyServerSocket myServerSocket;
     private MyClientSocket myClientSocket;
 
+
     private SSIDSelect ssidSelect;
     private boolean hasUsefulSSID;
     private boolean connectNeedWifiSuccess;
@@ -49,6 +50,7 @@ public class WifiAPControl {
         wifiAdmin = new WifiAdmin(context);
         myServerSocket = new MyServerSocket();
         myClientSocket = new MyClientSocket();
+
 
         ssidSelect = new SSIDSelect();
         state = STATE_NONE;
@@ -73,13 +75,14 @@ public class WifiAPControl {
     public void openServer() {
         // 文件没有准备好 无法开启服务
         if (!EncodeFile.getSingleton().isInitSuccess()) {
-            MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(),"编码文件没有准备好，无法开启服务");
+            MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(), "编码文件没有准备好，无法开启服务");
             return;
         }
 
         openAP();
         // 开启serverSocket
         myServerSocket.openServer(ConnectConstant.SERVER_PORT);
+        MainActivity.sendMsg2UIThread(MsgType.SERVER_STATE_FLAG.ordinal(),"");
     }
 
     private void closeAP() {
@@ -112,6 +115,24 @@ public class WifiAPControl {
         // 连接server的操作不能在此执行
         // 再连接wifi热点成功后执行
 
+        Timer timer = new Timer();
+        long startTime = System.currentTimeMillis();
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                if (connectNeedWifiSuccess) {
+                    timer.cancel();
+                    return;
+                }
+                // 超过15秒还没连接上时，取消定时器
+                if (System.currentTimeMillis() - startTime > 15 * 1000) {
+                    client2server();
+                    timer.cancel();
+                }
+            }
+        }, 0, 1000);
+
+        MainActivity.sendMsg2UIThread(MsgType.CLIENT_STATE_FLAG.ordinal(),"");
     }
 
 
@@ -158,11 +179,11 @@ public class WifiAPControl {
         if (state == STATE_WIFI && !connectNeedWifiSuccess) {
             //连接的wifi不是需要的
             String wifiAdminSSID = wifiAdmin.currentConnectSSID();
-            if(!wifiAdminSSID.equals("\""+ssidSelect.selectedSSID+"\"")){
+            if (!wifiAdminSSID.equals("\"" + ssidSelect.selectedSSID + "\"")) {
                 connectAP(ssidSelect.selectedSSID);
                 return;
             }
-            Log.e("hanhai",wifiAdminSSID);
+            Log.e("hanhai", wifiAdminSSID);
 
             connectNeedWifiSuccess = true;
 
@@ -179,6 +200,7 @@ public class WifiAPControl {
                         //Log.e("hanhai", "wifi不可用");
                     }
                     // 超过5秒还没连接上时，取消定时器
+                    // 尝试切换为server状态
                     if (System.currentTimeMillis() - startTime > 5 * 1000) {
                         timer.cancel();
                     }
@@ -189,19 +211,19 @@ public class WifiAPControl {
 
     // 在此判断需要连接哪个wifi
     public void wifiScanSuccess() {
-        Log.e("hanhai","state = "+state+"  hasUsefulSSID = "+hasUsefulSSID);
-        if(state == STATE_WIFI && !hasUsefulSSID){
-            Log.e("hanhai","处理热点列表");
+        Log.e("hanhai", "state = " + state + "  hasUsefulSSID = " + hasUsefulSSID);
+        if (state == STATE_WIFI && !hasUsefulSSID) {
+            Log.e("hanhai", "处理热点列表");
 
             List<ScanResult> list = wifiAdmin.getWifiScanResult();
             String ssid = ssidSelect.selectSSID(list);
-            if(ssid != null){
+            if (ssid != null) {
                 hasUsefulSSID = true;
                 String currentSSID = wifiAdmin.currentConnectSSID();
-                Log.d("hanhai","currentSSID = "+currentSSID);
-                if(currentSSID.equals("\"" + ssid + "\"")){
+                Log.d("hanhai", "currentSSID = " + currentSSID);
+                if (currentSSID.equals("\"" + ssid + "\"")) {
                     connectWifiSuccess(ssid);
-                }else{
+                } else {
                     connectAP(ssid);
                 }
 
@@ -234,7 +256,7 @@ public class WifiAPControl {
             } else {
                 openClient();
             }
-        }else{
+        } else {
             openClient();
         }
     }
