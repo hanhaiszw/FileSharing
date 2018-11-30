@@ -22,10 +22,10 @@ import wifi.wifibase.WifiAdmin;
 
 
 public class WifiAPControl {
-    APAdmin apAdmin;
-    WifiAdmin wifiAdmin;
+    private APAdmin apAdmin;
+    private WifiAdmin wifiAdmin;
 
-    Context context;
+    //private Context context;
 
     // 分为三种状态
     // 0 无
@@ -45,7 +45,7 @@ public class WifiAPControl {
     private boolean connectNeedWifiSuccess;
 
     public WifiAPControl(Context context) {
-        this.context = context;
+        //this.context = context;
         apAdmin = new APAdmin(context);
         wifiAdmin = new WifiAdmin(context);
         myServerSocket = new MyServerSocket();
@@ -60,6 +60,9 @@ public class WifiAPControl {
     }
 
 
+    /**
+     * 配置并开启AP
+     */
     private void openAP() {
         // 不是必要的
         closeWifi();
@@ -68,9 +71,34 @@ public class WifiAPControl {
         apAdmin.startAp(wifiConfiguration);
         state = STATE_AP;
     }
+    private void closeAP() {
+        apAdmin.stopAp();
+        //
+        state = STATE_NONE;
+    }
+
+    private void openWifi() {
+        closeAP();
+        wifiAdmin.openWifi();
+        state = STATE_WIFI;
+        hasUsefulSSID = false;
+        connectNeedWifiSuccess = false;
+        if (wifiAdmin.isWifiEnabled()) {
+            openWifiSuccess();
+            wifiScanSuccess();
+        }
+    }
+
+    private void closeWifi() {
+        wifiAdmin.deleteContainSSid();
+        wifiAdmin.closeWifi();
+        state = STATE_NONE;
+    }
+
+
 
     /**
-     * 配置并开启AP
+     * 开启server状态
      */
     public void openServer() {
         // 文件没有准备好 无法开启服务
@@ -85,28 +113,9 @@ public class WifiAPControl {
         MainActivity.sendMsg2UIThread(MsgType.SERVER_STATE_FLAG.ordinal(),"");
     }
 
-    private void closeAP() {
-        apAdmin.stopAp();
-        //
-        state = STATE_NONE;
-    }
-
-
-    private void openWifi() {
-        closeAP();
-        wifiAdmin.openWifi();
-        state = STATE_WIFI;
-        hasUsefulSSID = false;
-        connectNeedWifiSuccess = false;
-        if (wifiAdmin.isWifiEnabled()) {
-            openWifiSuccess();
-            wifiScanSuccess();
-        }
-    }
 
     /**
-     * 打开wifi并连接AP
-     * 这里只是通知打开wifi，打开是否成功在openWifiSuccess中处理
+     * 开启client状态
      */
     public void openClient() {
         // 打开wifi
@@ -136,21 +145,9 @@ public class WifiAPControl {
     }
 
 
-    private void closeWifi() {
-        wifiAdmin.deleteContainSSid();
-        wifiAdmin.closeWifi();
-        state = STATE_NONE;
-    }
-
-
-    //连接指定的AP
-    public void connectAP(String ssid) {
-        WifiConfiguration wifiConfiguration = wifiAdmin.makeConfiguration(
-                ssid, ConnectConstant.AP_PASSWORD, WifiAPBase.KEY_WPA);
-        wifiAdmin.addNetwork(wifiConfiguration);
-    }
-
-
+    /**
+     * wifi广播处理方法
+     */
     public void openWifiSuccess() {
         if (state == STATE_WIFI) {
             Log.e("hanhai", "打开wifi成功");
@@ -180,7 +177,7 @@ public class WifiAPControl {
             //连接的wifi不是需要的
             String wifiAdminSSID = wifiAdmin.currentConnectSSID();
             if (!wifiAdminSSID.equals("\"" + ssidSelect.selectedSSID + "\"")) {
-                connectAP(ssidSelect.selectedSSID);
+                wifiAdmin.connectAP(ssidSelect.selectedSSID);
                 return;
             }
             Log.e("hanhai", wifiAdminSSID);
@@ -224,7 +221,7 @@ public class WifiAPControl {
                 if (currentSSID.equals("\"" + ssid + "\"")) {
                     connectWifiSuccess(ssid);
                 } else {
-                    connectAP(ssid);
+                    wifiAdmin.connectAP(ssid);
                 }
 
             }
@@ -234,6 +231,9 @@ public class WifiAPControl {
     }
 
 
+    /**
+     * 状态转化方法
+     */
     public void server2client() {
         EncodeFile encodeFile = EncodeFile.getSingleton();
         int currentPieceNum = encodeFile.getCurrentPieceNum();
@@ -262,6 +262,10 @@ public class WifiAPControl {
     }
 
 
+    /**
+     * 清理方法
+     * 关闭wifi和ap
+     */
     public void closeWifiAp() {
         closeWifi();
         closeAP();
