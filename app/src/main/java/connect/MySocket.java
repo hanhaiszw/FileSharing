@@ -61,7 +61,7 @@ public class MySocket {
                 DataInputStream dis = new DataInputStream(socket.getInputStream());
                 byte[] data = new byte[4096];
                 while (true) {
-                    if (socket.isConnected() && !socket.isClosed()) {
+                    if (socketIsActive()) {
                         receiveSocketMsgContent(dis, data);
                     } else {
                         break;
@@ -72,6 +72,7 @@ public class MySocket {
                 System.out.println("client端socket关闭");
             } finally {
                 //关闭socket操作
+                close();
             }
         }
     };
@@ -104,44 +105,39 @@ public class MySocket {
     }
 
 
-    private void receiveSocketMsgContent(DataInputStream dis, byte[] data) {
-        try {
-            SocketMsgContent socketMsgContent = new SocketMsgContent();
-            socketMsgContent.serveOrClient = dis.readInt();
-            socketMsgContent.code = dis.readInt();
+    private void receiveSocketMsgContent(DataInputStream dis, byte[] data) throws IOException {
 
+        SocketMsgContent socketMsgContent = new SocketMsgContent();
+        socketMsgContent.serveOrClient = dis.readInt();
+        socketMsgContent.code = dis.readInt();
+
+        /**
+         * 分支一  文件请求
+         */
+        if (socketMsgContent.code == SocketMsgContent.CODE_FILE_REQUEST) {
+            socketMsgContent.requestLen = dis.readInt();
+            byte[] bytes = new byte[socketMsgContent.requestLen];
+            dis.readFully(bytes);
+            socketMsgContent.requestBytes = bytes;
+
+        } else if (socketMsgContent.code == SocketMsgContent.CODE_XML_PART_FILE) {
             /**
-             * 分支一  文件请求
+             * 分支二  接收xml文件或是partfile
              */
-            if (socketMsgContent.code == SocketMsgContent.CODE_FILE_REQUEST) {
-                socketMsgContent.requestLen = dis.readInt();
-                byte[] bytes = new byte[socketMsgContent.requestLen];
-                dis.readFully(bytes);
-                socketMsgContent.requestBytes = bytes;
+            socketMsgContent.partNo = dis.readInt();
+            socketMsgContent.fileLen = dis.readInt();
 
-            } else if (socketMsgContent.code == SocketMsgContent.CODE_XML_PART_FILE) {
-                /**
-                 * 分支二  接收xml文件或是partfile
-                 */
-                socketMsgContent.partNo = dis.readInt();
-                socketMsgContent.fileLen = dis.readInt();
-
-                socketMsgContent.fileName = dis.readUTF();
-                socketMsgContent.file = receiveFile(dis, data, socketMsgContent.fileLen);
-            } else if (socketMsgContent.code == SocketMsgContent.CODE_LEAVE ||
-                    socketMsgContent.code == SocketMsgContent.CODE_ANSWER_END) {
-                /**
-                 * 分支三 执行的是离开 或是 一次对方一次文件应答结束
-                 */
-            }
-
-            // 送去解析数据  这里不应该重开线程
-            // MyThreadPool.execute(() -> socketMsgParse.parse(socketMsgContent));
-            socketMsgParse.parse(socketMsgContent);
-        } catch (IOException e) {
-            e.printStackTrace();
+            socketMsgContent.fileName = dis.readUTF();
+            socketMsgContent.file = receiveFile(dis, data, socketMsgContent.fileLen);
+        } else if (socketMsgContent.code == SocketMsgContent.CODE_LEAVE ||
+                socketMsgContent.code == SocketMsgContent.CODE_ANSWER_END) {
+            /**
+             * 分支三 执行的是离开 或是 一次对方一次文件应答结束
+             */
         }
-
+        // 送去解析数据  这里不应该重开线程
+        // MyThreadPool.execute(() -> socketMsgParse.parse(socketMsgContent));
+        socketMsgParse.parse(socketMsgContent);
     }
 
     public void sendFile(File file) {
@@ -216,5 +212,11 @@ public class MySocket {
             e.printStackTrace();
         }
 
+    }
+
+
+    // 检查socket是否还可用
+    public boolean socketIsActive(){
+        return socket.isConnected() && !socket.isClosed();
     }
 }

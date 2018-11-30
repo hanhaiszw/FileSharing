@@ -1,4 +1,4 @@
-package wifi;
+package wifi.wifibase;
 
 import java.lang.reflect.Method;
 import android.content.Context;
@@ -62,7 +62,7 @@ public class APAdmin extends WifiAPBase {
             return true;
         }
         boolean result = setWifiAp(null, false);
-        //openWifi(); // 关闭热点，打开wifi
+        //openClient(); // 关闭热点，打开wifi
         return result;
     }
 

@@ -5,5 +5,10 @@ package data;
  */
 public enum MsgType {
     SHOW_MSG,
-    ENCODE_FILE_CHANGE
+    ENCODE_FILE_CHANGE,
+    OPEN_WIFI_SUCCESS,
+    CONNECT_WIFI_SUCCESS,
+    WIFI_SCAN_SUCCESS,
+    SERVER_2_CLIENT,
+    CLIENT_2_SERVER
 }

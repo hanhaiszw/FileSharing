@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:custom="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    xmlns:custom="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
     tools:context=".MainActivity">
 
@@ -13,30 +13,30 @@
         android:layout_width="match_parent"
         android:layout_height="350dp"
         android:background="@drawable/textview_border">
+
         <TextView
-            android:paddingLeft="10dp"
-            android:paddingRight="10dp"
             android:id="@+id/tv_prompt"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            />
+            android:paddingLeft="10dp"
+            android:paddingRight="10dp" />
     </ScrollView>
 
     <LinearLayout
-        android:visibility="gone"
         android:id="@+id/layout_wavePro"
         android:layout_width="match_parent"
         android:layout_height="350dp"
         android:background="@drawable/textview_border"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:visibility="gone">
 
         <com.github.lzyzsd.circleprogress.CircleProgress
-            android:layout_marginTop="20dp"
             android:id="@+id/circle_progress"
-            android:layout_marginLeft="50dp"
             android:layout_width="260dp"
             android:layout_height="260dp"
-            custom:circle_progress="0"/>
+            android:layout_marginLeft="50dp"
+            android:layout_marginTop="20dp"
+            custom:circle_progress="0" />
 
 
         <TextView
@@ -50,49 +50,48 @@
             android:textSize="20sp" />
     </LinearLayout>
 
-
-
-
-    <Button
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="切换视图"
-        android:id="@+id/btn_switch_view"
-        />
-
-    <Button
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="选择文件"
-        android:id="@+id/btn_select_file"
-        />
     <LinearLayout
+        android:layout_marginTop="10dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal">
+
         <Button
+            android:id="@+id/btn_openServer"
+            style="@android:style/Widget.Button"
             android:layout_width="0dp"
-            android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:text="打开wifi"
-            android:id="@+id/btn_openWifi"
-            />
+            android:layout_weight="1"
+            android:text="Server" />
         <Button
+            android:id="@+id/btn_openClient"
+            style="@android:style/Widget.Button"
             android:layout_width="0dp"
-            android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:text="打开热点"
-            android:id="@+id/btn_openAP"
-            />
+            android:layout_weight="1"
+            android:text="Client" />
     </LinearLayout>
 
 
-
     <Button
+        android:id="@+id/btn_switch_view"
+        style="@android:style/Widget.Button"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Test"
+        android:text="切换视图" />
+
+    <Button
+        android:id="@+id/btn_select_file"
+        style="@android:style/Widget.Button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="选择文件" />
+
+    <Button
         android:id="@+id/btn_test"
-        />
+        style="@android:style/Widget.Button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Test" />
 
 </LinearLayout>

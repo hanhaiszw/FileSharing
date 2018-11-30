@@ -28,6 +28,10 @@ public class SocketMsgParse {
     // 2 离开
     private int leaveFlag = 0;
 
+
+    // 最大请求文件数目
+    private int maxRequestFileNum = 0;
+
     public SocketMsgParse(MySocket mySocket) {
         this.mySocket = mySocket;
     }
@@ -48,6 +52,8 @@ public class SocketMsgParse {
                     solveXMLFile(socketMsgContent);
                 } else {
                     solvePartFile(socketMsgContent);
+                    // 更新请求文件的数量
+                    maxRequestFileNum--;
                 }
                 break;
             // 3 leave 或者其他信息
@@ -66,7 +72,7 @@ public class SocketMsgParse {
 
         // 把改变发给MainActivity
         // 通知MainActivity, EncodeFile单例发生了改变
-        MainActivity.getMainActivity().sendMsg2UIThread(MsgType.ENCODE_FILE_CHANGE.ordinal(), "");
+        MainActivity.sendMsg2UIThread(MsgType.ENCODE_FILE_CHANGE.ordinal(), "");
 
     }
 
@@ -80,12 +86,23 @@ public class SocketMsgParse {
             //File file = new File(EncodeFile.getSingleton().getXmlFilePath());
 //            SocketMsgContent answer = new SocketMsgContent(
 //                    SocketMsgContent.CLIENT_MSG, SocketMsgContent.XML_PRATNO, file);
-
             // 这里有可能出问题了
             // 发送xml文件
             //mySocket.sendSocketMsgContent(answer);
         } else if (socketMsgContent.serveOrClient == SocketMsgContent.CLIENT_MSG) {
 
+        }
+
+        /**
+         * 控制第一次获取一半数据时，停止数据请求，转化为server模式
+         */
+        EncodeFile encodeFile = EncodeFile.getSingleton();
+        int currentPieceFileNum = encodeFile.getCurrentPieceNum();
+        int halfPieceFileNum = encodeFile.getTotalPieceNum() / 2;
+        if (currentPieceFileNum < halfPieceFileNum) {
+            maxRequestFileNum = halfPieceFileNum - currentPieceFileNum;
+        } else {
+            maxRequestFileNum = halfPieceFileNum;
         }
 
         //删除对方的xml文件
@@ -167,7 +184,7 @@ public class SocketMsgParse {
      */
     private void sendFileQuestInfor() {
         Vector<byte[]> requestVector = EncodeFile.getSingleton().getFileRequest(itsEncodeFile);
-        if (requestVector.size() == 0) {
+        if (requestVector.size() == 0 || maxRequestFileNum == 0) {//
             //说明对方没有对自己有用的数据
             //离开
             SocketMsgContent socketMsgContent = new SocketMsgContent();
@@ -189,6 +206,9 @@ public class SocketMsgParse {
 
         } else {
             int row = requestVector.size();
+            // 控制文件请求数目
+            if(row > maxRequestFileNum)
+                row = maxRequestFileNum;
             int col = requestVector.get(0).length;
             byte[] requestBytes = new byte[row * col];
             for (int i = 0; i < row; i++) {

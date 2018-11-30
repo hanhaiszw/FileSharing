@@ -12,8 +12,10 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.text.SimpleDateFormat;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 import java.util.Vector;
 
@@ -36,6 +38,19 @@ public class ToolUtils {
             ret.append(seed.charAt(index));
         }
         return ret.toString();
+    }
+
+    /**
+     * 获取系统当前的时间
+     * @param dataFormat "yyyy-MM-dd HH:mm:ss:SSS"
+     */
+    public static String getCurrentTime(String dataFormat) {
+        SimpleDateFormat format = new SimpleDateFormat(dataFormat);//
+        Date curDate = new Date();
+        return format.format(curDate);
+    }
+    public static String getCurrentTime(){
+        return getCurrentTime("yyyy-MM-dd HH:mm:ss:SSS");
     }
 
     /**
@@ -177,6 +192,7 @@ public class ToolUtils {
 
     /**
      * 获取指定目录下文件
+     * 只会返回文件 不会返回文件夹
      */
     public static Vector<File> getUnderFiles(String folderPath) {
         File directory = new File(folderPath);

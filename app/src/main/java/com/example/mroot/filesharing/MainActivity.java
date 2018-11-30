@@ -3,12 +3,13 @@ package com.example.mroot.filesharing;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.text.InputType;
-import android.text.Layout;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -34,15 +35,14 @@ import butterknife.ButterKnife;
 import butterknife.OnClick;
 import cache.EncodeFile;
 
-import connect.ConnectConstant;
-import connect.MyClientSocket;
-import connect.MyServerSocket;
 import data.CachePath;
 import data.MsgType;
 import data.RunMode;
 import nc.NCUtils;
 import utils.MyThreadPool;
-import wifi.WifiAPControl;
+import utils.ToolUtils;
+import wifi.wifictrl.WifiAPControl;
+import wifi.wifictrl.WifiStateReceiver;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -60,7 +60,7 @@ public class MainActivity extends AppCompatActivity {
      * 1 代表是圆形进度模式
      */
     private final int PROMPT_VIEW = 0;
-    private final int WAVEPROGRESS_VIEW = 1;
+    private final int CIRCLE_PROGRESS_VIEW = 1;
     private int viewState;
     @BindView(R.id.layout_wavePro)
     LinearLayout layout_wavePro;
@@ -74,13 +74,12 @@ public class MainActivity extends AppCompatActivity {
 
     private WifiAPControl wifiAPControl;
 
-    private MyServerSocket myServerSocket;
-    private MyClientSocket myClientSocket;
-
-
     private static RunMode runMode;
 
     private static MainActivity mainActivity;
+
+    // wifi广播
+    private WifiStateReceiver wifiStateReceiver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -104,20 +103,35 @@ public class MainActivity extends AppCompatActivity {
         scrollView.getViewTreeObserver().addOnGlobalLayoutListener(() ->
                 scrollView.post(() -> scrollView.fullScroll(View.FOCUS_DOWN)));
 
-        viewState = PROMPT_VIEW;
         init();
     }
 
     private void init() {
         wifiAPControl = new WifiAPControl(this);
-        myServerSocket = new MyServerSocket();
-        myClientSocket = new MyClientSocket();
         runMode = new RunMode();
         //读取上一次的配置数据
         runMode.initRunMode(context);
 
         EncodeFile.updateSingleton(runMode.lastXMLFilePath);
-        sendMsg2UIThread(MsgType.ENCODE_FILE_CHANGE.ordinal(),"");
+        sendMsg2UIThread(MsgType.ENCODE_FILE_CHANGE.ordinal(), "");
+
+        // 切换默认视图
+        if (viewState == PROMPT_VIEW) {
+            switch_view();
+        }
+
+        // 关闭wifi和ap
+        wifiAPControl.closeWifiAp();
+
+        // 注册广播
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(WifiManager.RSSI_CHANGED_ACTION);
+        intentFilter.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION);
+        intentFilter.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
+        intentFilter.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
+        wifiStateReceiver = new WifiStateReceiver();
+        registerReceiver(wifiStateReceiver, intentFilter);
+
     }
 
 
@@ -131,20 +145,18 @@ public class MainActivity extends AppCompatActivity {
                 .start();
     }
 
-    @OnClick(R.id.btn_openWifi)
+    @OnClick(R.id.btn_openClient)
     public void openClient() {
-        MyThreadPool.execute(() -> {
-            //wifiAPControl.openWifi();
-            myClientSocket.connect(ConnectConstant.SERVER_IP, ConnectConstant.SERVER_PORT);
-        });
-
+//        MyThreadPool.execute(() -> {
+//            //wifiAPControl.openClient();
+//            myClientSocket.connect(ConnectConstant.SERVER_IP, ConnectConstant.SERVER_PORT);
+//        });
+        wifiAPControl.openClient();
     }
 
-    @OnClick(R.id.btn_openAP)
-    public void openAP() {
-        wifiAPControl.openAP();
-        myServerSocket.openServer(ConnectConstant.SERVER_PORT);
-
+    @OnClick(R.id.btn_openServer)
+    public void openServer() {
+        wifiAPControl.openServer();
     }
 
     @OnClick(R.id.btn_test)
@@ -164,7 +176,9 @@ public class MainActivity extends AppCompatActivity {
 //        }
         //scrollView.fullScroll(ScrollView.FOCUS_DOWN);
 
-        EncodeFile.getSingleton().recover();
+        //EncodeFile.getSingleton().recover();
+
+        // wifiAPControl.connectWifiSuccess("");
     }
 
     @OnClick(R.id.btn_switch_view)
@@ -172,9 +186,9 @@ public class MainActivity extends AppCompatActivity {
         if (viewState == PROMPT_VIEW) {
             scrollView.setVisibility(View.GONE);
             layout_wavePro.setVisibility(View.VISIBLE);
-            viewState = WAVEPROGRESS_VIEW;
+            viewState = CIRCLE_PROGRESS_VIEW;
 
-        } else if (viewState == WAVEPROGRESS_VIEW) {
+        } else if (viewState == CIRCLE_PROGRESS_VIEW) {
             scrollView.setVisibility(View.VISIBLE);
             layout_wavePro.setVisibility(View.GONE);
             viewState = PROMPT_VIEW;
@@ -190,12 +204,28 @@ public class MainActivity extends AppCompatActivity {
             MsgType msgType = MsgType.values()[msg.what];
             switch (msgType) {
                 case SHOW_MSG:
-                    //Toast.makeText(context, msg.obj.toString(), Toast.LENGTH_SHORT).show();
-                    String prompt = msg.obj.toString() + "\n";
-                    tv_prompt.append(prompt);
+                    String prompt = msg.obj.toString();
+                    setPrompt(prompt);
                     break;
                 case ENCODE_FILE_CHANGE:
                     updateEncodeFileInfo();
+                    break;
+                case OPEN_WIFI_SUCCESS:
+                    wifiAPControl.openWifiSuccess();
+                    break;
+                case CONNECT_WIFI_SUCCESS:
+                    String ssid = msg.obj.toString();
+                    wifiAPControl.connectWifiSuccess(ssid);
+                    break;
+                case WIFI_SCAN_SUCCESS:
+                    wifiAPControl.wifiScanSuccess();
+                    break;
+
+                case SERVER_2_CLIENT:
+                    wifiAPControl.server2client();
+                    break;
+                case CLIENT_2_SERVER:
+                    wifiAPControl.client2server();
                     break;
                 default:
                     break;
@@ -224,6 +254,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void solveSelectFile(File file) {
         runMode.selectStartPath = file.getParent();
+
         new MaterialDialog.Builder(context)
                 .title("请选择运行模式")
                 .positiveText("确认")
@@ -237,12 +268,17 @@ public class MainActivity extends AppCompatActivity {
                 })
                 .dismissListener(dialog -> {
                     //开始处理文件
-                    Toast.makeText(MainActivity.this, "当前运行模式" +
-                            runMode.runModeString, Toast.LENGTH_SHORT).show();
+                    String info = "当前运行模式: " + runMode.runModeString + " K = " + runMode.K;
+                    Toast.makeText(MainActivity.this, info, Toast.LENGTH_SHORT).show();
+                    MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(), info);
+
                     MyThreadPool.execute(() -> {
                         Log.d("hanhai", "文件预处理开始");
+                        MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(), "文件预处理开始");
                         EncodeFile.updateSingleton(file, runMode.K, runMode.runModeString);
-                        sendMsg2UIThread(MsgType.ENCODE_FILE_CHANGE.ordinal(),"");
+                        sendMsg2UIThread(MsgType.ENCODE_FILE_CHANGE.ordinal(), "");
+                        Log.d("hanhai", "文件预处理结束");
+                        MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(), "文件预处理结束");
                     });
                 })
                 .show();
@@ -250,7 +286,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void updateEncodeFileInfo() {
         EncodeFile encodeFile = EncodeFile.getSingleton();
-        if(!encodeFile.isInitSuccess()){
+        if (!encodeFile.isInitSuccess()) {
             return;
         }
         runMode.runModeString = encodeFile.getRunModeString();
@@ -264,7 +300,7 @@ public class MainActivity extends AppCompatActivity {
         int totalPieceNum = encodeFile.getTotalPieceNum();
 
         circleProgress.setFinishedColor(runMode.getRunColor());
-        int progress = (int) ((float)currentPieceNum / totalPieceNum * 100);
+        int progress = (int) ((float) currentPieceNum / totalPieceNum * 100);
         circleProgress.setProgress(progress);
         circleProgress.setPrefixText(currentPieceNum + "/" + totalPieceNum + " (");
         circleProgress.setSuffixText("%)");
@@ -278,11 +314,59 @@ public class MainActivity extends AppCompatActivity {
         } else {
             runMode.commitRunMode(this);
             finish();
+            // 关闭wifi和ap
+            wifiAPControl.closeWifiAp();
+
+            // 清空多余的缓存
+            clearCache();
+
             NCUtils.UninitGalois();
             MyThreadPool.shutdownNow();
+            //android.os.Process.killProcess(android.os.Process.myPid());
+            unregisterReceiver(wifiStateReceiver);
             //不会调用周期函数，如onDestroy()
             System.exit(0);
         }
+    }
+
+    private void clearCache() {
+        // 清空不必要的缓存
+        ToolUtils.deleteDir(CachePath.RECEIVE_TEMP_PATH);
+        File folder = new File(CachePath.TEMP_PATH);
+        if (folder.exists() && folder.isDirectory()) {
+            File[] files = folder.listFiles();
+            String encodeFilePath = EncodeFile.getSingleton().getFolderPath();
+            for (int i = 0; i < files.length; i++) {
+                File file = files[i];
+                if (file.isFile()) {
+                    ToolUtils.deleteFile(file);
+                } else if (file.isDirectory()) {
+                    if(!file.getPath().equals(encodeFilePath)){
+                        ToolUtils.deleteDir(file);
+                    }
+                }
+            }
+        }
+
+    }
+
+
+    // 设置提示信息
+    private void setPrompt(String prompt) {
+        // 获取的值是之前的行数加1 所以这里减1
+        int lineNum = tv_prompt.getLineCount();
+        Log.v("hanhai", "prompt中有" + lineNum + "行数据");
+        // 控制最大显示行数为400行  最大显示其实为402行
+        if (lineNum > 400) {
+            String text = tv_prompt.getText().toString();
+            // 去掉两行  下面会增加两行
+            text = text.substring(text.indexOf("\n") + 1);
+            text = text.substring(text.indexOf("\n") + 1);
+            tv_prompt.setText(text);
+        }
+        String strTime = ToolUtils.getCurrentTime();
+        tv_prompt.append(strTime + "\n");
+        tv_prompt.append(prompt + "\n");
     }
 
     //返回context对象
@@ -291,20 +375,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     //全局发送message到handle处理的方法
-    public void sendMsg2UIThread(int what, Object obj) {
+    private void send2UI(int what, Object obj) {
         //sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(),"hello, world!");
         if (handler != null) {
             Message.obtain(handler, what, obj).sendToTarget();
         }
     }
 
-    /**
-     * 获取MainActivity实例
-     *
-     * @return
-     */
-    public static MainActivity getMainActivity() {
-        return mainActivity;
+    public static void sendMsg2UIThread(int what, Object obj) {
+        mainActivity.send2UI(what, obj);
     }
 
     @Override
@@ -312,6 +391,7 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
         System.out.println("程序退出");
     }
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -375,11 +455,20 @@ public class MainActivity extends AppCompatActivity {
         AndPermission.with(this)
                 .runtime()
                 .permission(Permission.Group.STORAGE)
+                .permission("android.permission.ACCESS_FINE_LOCATION")
                 .onGranted(permissions -> {
                     // Storage permission are allowed.
                 })
                 .onDenied(permissions -> {
                     // Storage permission are not allowed.
+                    AndPermission.with(this)
+                            .runtime()
+                            .setting()
+                            .onComeback(() -> {
+                                // 用户从设置回来了。
+                                //Toast.makeText(this, "用户从设置回来了", Toast.LENGTH_SHORT).show();
+                            })
+                            .start();
                 })
                 .start();
     }

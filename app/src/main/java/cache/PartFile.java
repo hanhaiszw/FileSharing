@@ -9,16 +9,11 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.lang.reflect.Method;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
 import java.util.Random;
 import java.util.Vector;
 
 import nc.NCUtils;
-import utils.MyByteBuffer;
-import utils.MyThreadPool;
 import utils.ToolUtils;
 
 
@@ -158,7 +153,7 @@ abstract class PartFile {
      *
      * @return
      */
-    public File reencodePartFile1() {
+    public File reencodePartFile() {
         Vector<File> files = ToolUtils.getUnderFiles(pieceFilePath);
         int fileSize = files.size();
         if (files.size() == 1) {
@@ -320,7 +315,7 @@ abstract class PartFile {
 
 
     //保存文件
-    public boolean saveFile(File file, String fileName) {
+    public synchronized boolean saveFile(File file, String fileName) {
         // 1 判断文件长度
         int fileLen = (int) file.length();
         if (fileLen != pieceFileLen) return false;
@@ -446,7 +441,7 @@ abstract class PartFile {
 //        }
         //再生成一个再编码文件
         //recoverPartFile();
-        return reencodePartFile1();
+        return reencodePartFile();
     }
 
     /**
@@ -491,7 +486,7 @@ abstract class PartFile {
         try {
             RandomAccessFile af = new RandomAccessFile(file, "r");
             //跳过第一个字节
-            af.skipBytes(1);  //K值
+            af.seek(1);  //K值
             af.readFully(bytes);
             af.close();
         } catch (IOException e) {

@@ -2,6 +2,7 @@ package cache;
 
 import android.util.Log;
 
+import com.example.mroot.filesharing.MainActivity;
 import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 import com.thoughtworks.xstream.annotations.XStreamAsAttribute;
@@ -17,6 +18,7 @@ import java.util.Vector;
 import connect.SocketMsgContent;
 import data.CachePath;
 import data.ConstantData;
+import data.MsgType;
 import utils.MyThreadPool;
 import utils.ToolUtils;
 
@@ -119,8 +121,6 @@ public class EncodeFile {
 
         //写入配置文件
         object2xml();
-
-        Log.d("hanhai", "文件预处理结束");
     }
 
     //把对象保存在xml文件中
@@ -256,14 +256,19 @@ public class EncodeFile {
     }
 
     //恢复文件
-    public void recover() {
-        //如果本机就是文件源，则不执行解码
+    public synchronized void recover() {
+
         if(!initSuccess) return;
-        if (AndroidId.equals(ConstantData.ANDROID_ID)) {
-            return;
-        }
+
         //片文件数目不足以恢复原文件
         if (currentPieceNum < partNum * K) {
+            return;
+        }
+
+        //如果本机就是文件源，则不执行解码
+        if (AndroidId.equals(ConstantData.ANDROID_ID)) {
+            MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(),
+                    "本机为文件源，不执行解码操作");
             return;
         }
 
@@ -275,7 +280,7 @@ public class EncodeFile {
         //开始解码恢复文件
         MyThreadPool.execute(() -> {
             Log.d("hanhai", "开始恢复数据");
-
+            MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(),"开始恢复数据");
             File[] files = new File[partNum];
 
             for (PartFile partFile : partFileVector) {
@@ -290,7 +295,9 @@ public class EncodeFile {
             ToolUtils.mergeFiles(outFilePath, files);
 
             Log.d("hanhai", "恢复数据成功");
-            //ToolUtils.openFile(MainActivity.getContext(),outFilePath);
+            MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(),"恢复数据成功");
+            // 打开文件
+            ToolUtils.openFile(MainActivity.getContext(),outFilePath);
         });
 
     }
@@ -320,6 +327,12 @@ public class EncodeFile {
     //获取文件请求信息
     public Vector<byte[]> getFileRequest(EncodeFile itsEncodeFile) {
         Vector<byte[]> requestVector = new Vector<>();
+
+        // 为什么这里会为空
+        if(itsEncodeFile == null){
+            return requestVector;
+        }
+
         for (PartFile itsPartFile : itsEncodeFile.partFileVector) {
             for (PartFile partFile : partFileVector) {
                 if (partFile.partNo == itsPartFile.partNo) {
@@ -389,6 +402,10 @@ public class EncodeFile {
 
     public String getFileName() {
         return fileName;
+    }
+
+    public String getFolderPath() {
+        return folderPath;
     }
 
     public String getXmlFilePath() {

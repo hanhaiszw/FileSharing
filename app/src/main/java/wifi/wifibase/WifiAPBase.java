@@ -1,4 +1,4 @@
-package wifi;
+package wifi.wifibase;
 
 import android.content.Context;
 import android.net.wifi.WifiConfiguration;
@@ -30,32 +30,40 @@ public class WifiAPBase {
         mWifiInfo = mWifiManager.getConnectionInfo();
     }
 
-    /** 获取Wifi状态 **/
+    /**
+     * 获取Wifi状态
+     **/
     public boolean getWifiState() {
         return this.mWifiManager.isWifiEnabled();
     }
 
-    /** 打开Wifi **/
+    /**
+     * 打开Wifi
+     **/
     public void openWifi() {
         if (!this.mWifiManager.isWifiEnabled()) { // 当前wifi不可用
             this.mWifiManager.setWifiEnabled(true);
         }
     }
 
-    /** 关闭Wifi **/
+    /**
+     * 关闭Wifi
+     **/
     public void closeWifi() {
         if (mWifiManager.isWifiEnabled()) {
             mWifiManager.setWifiEnabled(false);
         }
     }
 
+
+
     /**
      * 配置Wifi信息
      *
-     * @param ssid Wifi热点名称
-     * @param passawrd 密码
+     * @param ssid          Wifi热点名称
+     * @param passawrd      密码
      * @param authAlogrithm KEY_NONE是无密码，KEY_WEP是共享密钥WEP模式，KEY_WPA是WPA_PSK加密，暂不支持EAP
-     * @param type AP模式或Client模式,WIFI_CLIENT_MODE,WIFI_AP_MODE
+     * @param type          AP模式或Client模式,WIFI_CLIENT_MODE,WIFI_AP_MODE
      * @return WifiConfiguration WifiConfiguration对象
      */
     public WifiConfiguration makeConfiguration(String ssid, String passawrd, int authAlogrithm, int type) {
@@ -147,29 +155,39 @@ public class WifiAPBase {
         return localWifiConfiguration;
     }
 
-    /** 得到配置好的网络 **/
+    /**
+     * 得到配置好的网络
+     **/
     public List<WifiConfiguration> getConfiguration() {
         return this.mWifiConfiguration;
     }
 
-    /** 锁定WifiLock，当下载大文件时需要锁定 **/
+    /**
+     * 锁定WifiLock，当下载大文件时需要锁定
+     **/
     public void AcquireWifiLock() {
         this.mWifilock.acquire();
     }
 
-    /** 创建一个WifiLock **/
+    /**
+     * 创建一个WifiLock
+     **/
     public void CreateWifiLock() {
         this.mWifilock = this.mWifiManager.createWifiLock("Test");
     }
 
-    /** 解锁WifiLock **/
+    /**
+     * 解锁WifiLock
+     **/
     public void ReleaseWifilock() {
         if (mWifilock.isHeld()) { // 判断时候锁定
             mWifilock.acquire();
         }
     }
 
-    /** 获取wifi SSID **/
+    /**
+     * 获取wifi SSID
+     **/
     public String getSSID() {
         if (this.mWifiInfo == null) {
             return null;
@@ -177,7 +195,9 @@ public class WifiAPBase {
         return this.mWifiInfo.getSSID();
     }
 
-    /** 获取wifi BSSID **/
+    /**
+     * 获取wifi BSSID
+     **/
     public String getBSSID() {
         if (this.mWifiInfo == null) {
             return null;
@@ -185,27 +205,38 @@ public class WifiAPBase {
         return this.mWifiInfo.getBSSID();
     }
 
-    /** 获取ip地址 **/
+
+    /**
+     * 获取ip地址
+     **/
     public int getIPAddress() {
         return (mWifiInfo == null) ? 0 : mWifiInfo.getIpAddress();
     }
 
-    /** 获取网关IP **/
+    /**
+     * 获取网关IP
+     **/
     public int getGatewayIP() {
         return (this.mWifiManager == null) ? 0 : this.mWifiManager.getDhcpInfo().gateway;
     }
 
-    /** 获取物理地址(Mac) **/
+    /**
+     * 获取物理地址(Mac)
+     **/
     public String getMacAddress() {
         return (mWifiInfo == null) ? null : mWifiInfo.getMacAddress();
     }
 
-    /** 获取网络id **/
+    /**
+     * 获取网络id
+     **/
     public int getNetworkId() {
         return (mWifiInfo == null) ? 0 : mWifiInfo.getNetworkId();
     }
 
-    /** 获取wifi连接信息 **/
+    /**
+     * 获取wifi连接信息
+     **/
     public WifiInfo getWifiInfo() {
         return this.mWifiManager.getConnectionInfo();
     }

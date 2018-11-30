@@ -1,4 +1,4 @@
-package wifi;
+package wifi.wifibase;
 
 public enum WIFI_AP_STATE {
     WIFI_AP_STATE_DISABLING,
