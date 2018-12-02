@@ -153,7 +153,8 @@ public class EncodeFile {
                         "partFilePath",
                         "pieceFilePath",
                         "reencodeFilePath",
-                        "AndroidId"
+                        "AndroidId",
+                        "readWriteLock"
                 });
 
         XStream xStream = new XStream(new Sun14ReflectionProvider(new FieldDictionary(sorter)));

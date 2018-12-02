@@ -101,6 +101,9 @@ public class WifiAPControl {
      * 开启server状态
      */
     public void openServer() {
+        // 取消myClientSocket的自动切换操作
+        myClientSocket.cancelSwitchTimer();
+
         // 文件没有准备好 无法开启服务
         if (!EncodeFile.getSingleton().isInitSuccess()) {
             MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(), "编码文件没有准备好，无法开启服务");
@@ -118,6 +121,9 @@ public class WifiAPControl {
      * 开启client状态
      */
     public void openClient() {
+        // 取消myServerSocket的自动切换动作
+        myServerSocket.cancelSwitchTimer();
+
         // 打开wifi
         openWifi();
         // 异步方法

@@ -23,6 +23,7 @@ public class MyServerSocket {
     private List<MySocket> mySockets = new ArrayList<>();
     private boolean isOpen;
     private long acceptStartTime;
+    private Timer switchTimer;
 
     public MyServerSocket() {
         isOpen = false;
@@ -83,12 +84,12 @@ public class MyServerSocket {
      * 尝试切换
      */
     public void trySwitch2Client() {
-        Timer timer = new Timer();
+        switchTimer = new Timer();
         // 加入随机值
         Random random = new Random();
         int rnd = random.nextInt(10);
 
-        timer.schedule(new TimerTask() {
+        switchTimer.schedule(new TimerTask() {
             @Override
             public void run() {
                 Iterator<MySocket> it = mySockets.iterator();
@@ -99,19 +100,29 @@ public class MyServerSocket {
                     }
                 }
 
-
                 // 当没有client在线  且等待时间超过了10s 则开始尝试切换
                 // 10 到 20 秒之间开始切换
                 if (mySockets.size() == 0 &&
                         System.currentTimeMillis() - acceptStartTime > (10 + rnd) * 1000) {
                     //切换向client
                     MainActivity.sendMsg2UIThread(MsgType.SERVER_2_CLIENT.ordinal(), "");
-                    timer.cancel();
+                    switchTimer.cancel();
                 }
             }
         }, 0, 1000);
     }
 
+
+    // 需要加入释放锁操作
+    // 防止手动点击client按钮后  还会自动切换向
+    public void cancelSwitchTimer(){
+        try {
+            switchTimer.cancel();
+        } catch (Exception e) {
+            System.out.println("MyServerSocket 取消锁异常");
+            e.printStackTrace();
+        }
+    }
 
     public void closeServer() {
         try {

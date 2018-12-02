@@ -5,6 +5,7 @@ import java.util.Vector;
 
 /**
  * 为了避免程序中不断申请释放大数组，这里申请几个放在这里
+ * 不再使用
  */
 public class MyByteBuffer {
     //只有两种可能的数组长度 2.5 和 10M

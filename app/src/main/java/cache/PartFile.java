@@ -12,6 +12,7 @@ import java.io.RandomAccessFile;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.Vector;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import nc.NCUtils;
 import utils.ToolUtils;
@@ -45,6 +46,12 @@ abstract class PartFile {
 
     @XStreamOmitField
     String AndroidId;
+
+    /**
+     * 用以同步读写操作
+     */
+    @XStreamOmitField
+    ReentrantReadWriteLock readWriteLock = new ReentrantReadWriteLock(true);
 
     public PartFile() {
     }
@@ -154,7 +161,15 @@ abstract class PartFile {
      * @return
      */
     public File reencodePartFile() {
-        Vector<File> files = ToolUtils.getUnderFiles(pieceFilePath);
+        Vector<File> files = null;
+        try {
+            readWriteLock.readLock().lock();
+            files = ToolUtils.getUnderFiles(pieceFilePath);
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            readWriteLock.readLock().unlock();
+        }
         int fileSize = files.size();
         if (files.size() == 1) {
             return files.get(0);
@@ -231,11 +246,20 @@ abstract class PartFile {
             return orgFile;
         }
 
-        Vector<File> files = ToolUtils.getUnderFiles(pieceFilePath);
-        //Vector<File> files = ToolUtils.getUnderFiles(reencodeFilePath);
+        Vector<File> files = null;
+        try {
+            readWriteLock.readLock().lock();
+            files = ToolUtils.getUnderFiles(pieceFilePath);
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            readWriteLock.readLock().unlock();
+        }
+
         if (files.size() < K) {
             return null;
         }
+
 
         // 从文件中读取编码系数
         byte[] coef = new byte[K * K];
@@ -315,7 +339,7 @@ abstract class PartFile {
 
 
     //保存文件
-    public synchronized boolean saveFile(File file, String fileName) {
+    public boolean saveFile(File file, String fileName) {
         // 1 判断文件长度
         int fileLen = (int) file.length();
         if (fileLen != pieceFileLen) return false;
@@ -340,8 +364,15 @@ abstract class PartFile {
         int rank = NCUtils.getRank(bt_coef);
         // rank == row + 1
         if (rank > row) {
-            File newFile = ToolUtils.createFile(pieceFilePath, fileName);
-            ToolUtils.copyFile(file, newFile);
+            try {
+                readWriteLock.writeLock().lock();
+                File newFile = ToolUtils.createFile(pieceFilePath, fileName);
+                ToolUtils.copyFile(file, newFile);
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                readWriteLock.writeLock().unlock();
+            }
             //更新系数数组
             updateCoefMatrix(bytes);
             return true;
@@ -363,7 +394,7 @@ abstract class PartFile {
     }
 
     //向对方请求文件  获取需要请求的文件编码系数
-    public byte[] getRequestCoef(PartFile itsPartFile) {
+    public synchronized byte[] getRequestCoef(PartFile itsPartFile) {
         int row = coefMatrix.size();
         if (row == K)
             return null;

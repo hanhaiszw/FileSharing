@@ -4,10 +4,13 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.net.Uri;
 import android.net.wifi.WifiManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.provider.Settings;
 import android.support.v7.app.AppCompatActivity;
 import android.text.InputType;
 import android.util.Log;
@@ -153,10 +156,6 @@ public class MainActivity extends AppCompatActivity {
 
     @OnClick(R.id.btn_openClient)
     public void openClient() {
-//        MyThreadPool.execute(() -> {
-//            //wifiAPControl.openClient();
-//            myClientSocket.connect(ConnectConstant.SERVER_IP, ConnectConstant.SERVER_PORT);
-//        });
         wifiAPControl.openClient();
     }
 
@@ -167,24 +166,6 @@ public class MainActivity extends AppCompatActivity {
 
     @OnClick(R.id.btn_test)
     public void test1() {
-//        try {
-//            for (int i = 0; i < 5; i++) {
-//                byte[] bytes = MyByteBuffer.getBuffer(10 *1024*1024);
-//            }
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        } finally {
-//
-//        }
-//        for (int i = 0; i < 100; i++) {
-//            sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(), "hello, world!");
-//
-//        }
-        //scrollView.fullScroll(ScrollView.FOCUS_DOWN);
-
-        //EncodeFile.getSingleton().recover();
-
-        // wifiAPControl.connectWifiSuccess("");
     }
 
     @OnClick(R.id.btn_switch_view)
@@ -202,7 +183,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    //处理各个线程发来的消息
+    /**
+     * 处理各个线程发来的消息
+     */
     @SuppressLint("HandlerLeak")
     private Handler handler = new Handler() {
         @Override
@@ -260,7 +243,15 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (resultCode == RESULT_OK) {
+        if (requestCode == REQUEST_CODE_WRITE_SETTINGS) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                if (Settings.System.canWrite(this)) {
+                    Log.i("hanhai", "onActivityResult write settings granted" );
+                }else{
+                    Log.i("hanhai", "onActivityResult write settings 被拒绝" );
+                }
+            }
+        }else if (resultCode == RESULT_OK) {
             if (requestCode == REQUEST_CODE_FROM_ACTIVITY) {
                 //在这里获取到选择的文件完整路径
                 List<String> list = data.getStringArrayListExtra("paths");
@@ -473,6 +464,7 @@ public class MainActivity extends AppCompatActivity {
      * 申请权限
      */
     private void requestPermissions() {
+        requestWriteSettings();
         // 检查权限是否获取（android6.0及以上系统可能默认关闭权限，且没提示）
         AndPermission.with(this)
                 .runtime()
@@ -493,6 +485,21 @@ public class MainActivity extends AppCompatActivity {
                             .start();
                 })
                 .start();
+    }
+    private static final int REQUEST_CODE_WRITE_SETTINGS = 1;
+
+    /**
+     * 注意：有时候热点打开会失败
+     * 手机重启后成功
+     */
+    private void requestWriteSettings() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (!Settings.System.canWrite(this)) {
+                Intent intent = new Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS);
+                intent.setData(Uri.parse("package:" + getPackageName()));
+                startActivityForResult(intent, REQUEST_CODE_WRITE_SETTINGS );
+            }
+        }
     }
 
 }

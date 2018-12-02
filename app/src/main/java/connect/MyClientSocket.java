@@ -17,6 +17,8 @@ import data.MsgType;
 public class MyClientSocket {
     private MySocket mySocket;
 
+    private Timer switchTimer;
+
     public MyClientSocket() {
 
     }
@@ -43,20 +45,31 @@ public class MyClientSocket {
      * 尝试切换
      */
     public void trySwitch2Server() {
-        Timer timer = new Timer();
-        timer.schedule(new TimerTask() {
+        switchTimer = new Timer();
+        switchTimer.schedule(new TimerTask() {
             @Override
             public void run() {
                 // 当断开连接时  尝试切换向server
                 if(!mySocket.socketIsActive()){
                     //切换向server
                     MainActivity.sendMsg2UIThread(MsgType.CLIENT_2_SERVER.ordinal(),"");
-                    timer.cancel();
+                    switchTimer.cancel();
                 }
             }
         }, 0, 1000);
     }
 
+
+    // 需要加入释放锁操作
+    // 防止手动点击server按钮后  还会自动切换向
+    public void cancelSwitchTimer(){
+        try {
+            switchTimer.cancel();
+        } catch (Exception e) {
+            System.out.println("MyServerSocket 取消锁异常");
+            e.printStackTrace();
+        }
+    }
 //    public void sendMsg(String msg) {
 //        if (mySocket != null) {
 //            mySocket.sendMsg(msg);

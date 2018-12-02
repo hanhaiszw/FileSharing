@@ -48,6 +48,8 @@ public class MySocket {
             socket.setTcpNoDelay(true);
             //设置read的超时值
             //socket.setSoTimeout(3 * 1000);
+            // 当超时15秒没有读到数据  就断开吧
+            socket.setSoTimeout(15 * 1000);
             MyThreadPool.execute(receiveRunnable);
         } catch (SocketException e) {
             e.printStackTrace();

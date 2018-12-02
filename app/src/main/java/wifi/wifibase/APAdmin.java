@@ -28,6 +28,7 @@ public class APAdmin extends WifiAPBase {
             return (Boolean) method.invoke(mWifiManager, wifiConfig, enable);
         } catch (Exception e) {
             Log.e(this.getClass().toString(), "", e);
+            Log.e("hanhai",e.toString());
             return false;
         }
     }
