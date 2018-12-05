@@ -27,9 +27,11 @@ public class MySocket {
     public final static int SOCKET_CLIENT = 1;
     private int socketState;
 
+    public String ip = "";
     public MySocket(Socket socket, int socketState) {
         this.socket = socket;
         this.socketState = socketState;
+        this.ip = socket.getInetAddress().toString();
         socketMsgParse = new SocketMsgParse(this);
         init();
     }

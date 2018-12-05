@@ -24,24 +24,24 @@ abstract class PartFile {
     @XStreamAlias("subfileNo")
     int partNo;
 
-    int pieceFileLen;
+    private int pieceFileLen;
 
     @XStreamAlias("subfileLen")
-    int partFileLen;
+    private int partFileLen;
 
-    Vector<int[]> coefMatrix = new Vector<>();
-
-    @XStreamOmitField
-    int K;
+    private Vector<int[]> coefMatrix = new Vector<>();
 
     @XStreamOmitField
-    String partFilePath;
+    private int K;
 
     @XStreamOmitField
-    String pieceFilePath;  //用来存储片文件
+    private String partFilePath;
 
     @XStreamOmitField
-    String reencodeFilePath; //用来存储再编码文件
+    private String pieceFilePath;  //用来存储片文件
+
+    @XStreamOmitField
+    private String reencodeFilePath; //用来存储再编码文件
 
 
     @XStreamOmitField
@@ -51,9 +51,10 @@ abstract class PartFile {
      * 用以同步读写操作
      */
     @XStreamOmitField
-    ReentrantReadWriteLock readWriteLock = new ReentrantReadWriteLock(true);
+    private ReentrantReadWriteLock readWriteLock;
 
-    public PartFile() {
+    PartFile() {
+        readWriteLock = new ReentrantReadWriteLock(true);
     }
 
     //初始化系数矩阵
@@ -82,6 +83,9 @@ abstract class PartFile {
         this.partFilePath = folderPath + File.separator + partNo;
         this.pieceFilePath = partFilePath + File.separator + "pieceFilePath";
         this.reencodeFilePath = partFilePath + File.separator + "reencodeFilePath";
+        if(readWriteLock == null){
+            readWriteLock = new ReentrantReadWriteLock(true);
+        }
     }
 
     // 恢复隐藏的成员变量值，创建存储文件夹
@@ -160,7 +164,7 @@ abstract class PartFile {
      *
      * @return
      */
-    public File reencodePartFile() {
+    private File reencodePartFile() {
         Vector<File> files = null;
         try {
             readWriteLock.readLock().lock();
@@ -170,6 +174,7 @@ abstract class PartFile {
         } finally {
             readWriteLock.readLock().unlock();
         }
+
         int fileSize = files.size();
         if (files.size() == 1) {
             return files.get(0);
@@ -446,7 +451,17 @@ abstract class PartFile {
         for (int i = 0; i < K; i++) {
             itsCoef[i] = request[i + 1];
         }
-        Vector<File> files = ToolUtils.getUnderFiles(pieceFilePath);
+
+        Vector<File> files = null;
+        try {
+            readWriteLock.readLock().lock();
+            files = ToolUtils.getUnderFiles(pieceFilePath);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        } finally {
+            readWriteLock.readLock().unlock();
+        }
 
         for (File file : files) {
             byte[] coef = getFileCoef(file);

@@ -4,6 +4,7 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Color;
 import android.net.Uri;
 import android.net.wifi.WifiManager;
 import android.os.Build;
@@ -156,7 +157,7 @@ public class MainActivity extends AppCompatActivity {
 
     @OnClick(R.id.btn_openClient)
     public void openClient() {
-        wifiAPControl.openClient();
+        wifiAPControl.openClient(true);
     }
 
     @OnClick(R.id.btn_openServer)
@@ -229,14 +230,15 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+
     private void setClientFlag() {
-        btn_openClient.setTextColor(0xffff0000);
-        btn_openServer.setTextColor(0xff000000);
+        btn_openClient.setTextColor(Color.RED);
+        btn_openServer.setTextColor(Color.BLACK);
     }
 
     private void setServerFlag() {
-        btn_openServer.setTextColor(0xffff0000);
-        btn_openClient.setTextColor(0xff000000);
+        btn_openServer.setTextColor(Color.RED);
+        btn_openClient.setTextColor(Color.BLACK);
     }
 
 

@@ -69,6 +69,7 @@ public class WifiAPControl {
         WifiConfiguration wifiConfiguration = apAdmin.makeConfiguration(
                 ConnectConstant.MY_SSID, ConnectConstant.AP_PASSWORD, WifiAPBase.KEY_WPA);
         apAdmin.startAp(wifiConfiguration);
+
         state = STATE_AP;
     }
     private void closeAP() {
@@ -101,16 +102,16 @@ public class WifiAPControl {
      * 开启server状态
      */
     public void openServer() {
-        // 取消myClientSocket的自动切换操作
-        myClientSocket.cancelSwitchTimer();
-
         // 文件没有准备好 无法开启服务
         if (!EncodeFile.getSingleton().isInitSuccess()) {
             MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(), "编码文件没有准备好，无法开启服务");
             return;
         }
 
+        //取消myClientSocket的自动切换操作
+        myClientSocket.cancelSwitchTimer();
         openAP();
+
         // 开启serverSocket
         myServerSocket.openServer(ConnectConstant.SERVER_PORT);
         MainActivity.sendMsg2UIThread(MsgType.SERVER_STATE_FLAG.ordinal(),"");
@@ -121,6 +122,12 @@ public class WifiAPControl {
      * 开启client状态
      */
     public void openClient() {
+       openClient(false);
+    }
+
+    // 是否是手动点击的
+    // 当是手动点击时   不允许切换
+    public void openClient(boolean click){
         // 取消myServerSocket的自动切换动作
         myServerSocket.cancelSwitchTimer();
 
@@ -129,27 +136,28 @@ public class WifiAPControl {
         // 异步方法
         // 连接server的操作不能在此执行
         // 再连接wifi热点成功后执行
-
-        Timer timer = new Timer();
-        long startTime = System.currentTimeMillis();
-        timer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                if (connectNeedWifiSuccess) {
-                    timer.cancel();
-                    return;
-                }
-                // 超过15秒还没连接上时，取消定时器
-                if (System.currentTimeMillis() - startTime > 15 * 1000) {
-                    client2server();
-                    timer.cancel();
-                }
-            }
-        }, 0, 1000);
-
         MainActivity.sendMsg2UIThread(MsgType.CLIENT_STATE_FLAG.ordinal(),"");
-    }
 
+        if(!click){
+            Timer timer = new Timer();
+            long startTime = System.currentTimeMillis();
+            timer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    if (connectNeedWifiSuccess) {
+                        timer.cancel();
+                        return;
+                    }
+                    // 超过15秒还没连接上时，取消定时器
+                    if (System.currentTimeMillis() - startTime > 15 * 1000) {
+                        client2server();
+                        timer.cancel();
+                    }
+                }
+            }, 0, 1000);
+        }
+
+    }
 
     /**
      * wifi广播处理方法
@@ -171,6 +179,9 @@ public class WifiAPControl {
                     wifiAdmin.startScan();
                 }
             }, 0, 1000);
+
+
+
         }
     }
 

@@ -8,12 +8,10 @@
     tools:context=".MainActivity">
 
     <ScrollView
-
         android:id="@+id/sv_prompt"
         android:layout_width="match_parent"
         android:layout_height="350dp"
         android:background="@drawable/textview_border">
-
         <TextView
             android:id="@+id/tv_prompt"
             android:layout_width="match_parent"
@@ -37,8 +35,6 @@
             android:layout_marginLeft="50dp"
             android:layout_marginTop="20dp"
             custom:circle_progress="0" />
-
-
         <TextView
             android:id="@+id/tv_fileName"
             android:layout_width="match_parent"
@@ -55,7 +51,6 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal">
-
         <Button
             android:id="@+id/btn_openServer"
             style="@android:style/Widget.Button"
@@ -86,7 +81,6 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="选择文件" />
-
     <Button
         android:id="@+id/btn_test"
         style="@android:style/Widget.Button"

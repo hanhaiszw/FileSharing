@@ -210,6 +210,7 @@ public class EncodeFile {
         //在此恢复
         for (PartFile partFile : encodeFile.partFileVector) {
             partFile.recoverOmitField(encodeFile.folderPath, encodeFile.K, encodeFile.AndroidId);
+
         }
 
         return encodeFile;
@@ -217,6 +218,7 @@ public class EncodeFile {
 
     //如果本地不存在此文件信息则创建
     private static EncodeFile getLocalCache(EncodeFile itsEncodeFile) {
+
         String folderPath = itsEncodeFile.folderPath;
         //当前就是此对象
         if (encodeFileSingleton.initSuccess &&

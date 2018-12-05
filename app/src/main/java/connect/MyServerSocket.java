@@ -1,6 +1,8 @@
 package connect;
 
 
+import android.util.Log;
+
 import com.example.mroot.filesharing.MainActivity;
 
 import java.io.File;
@@ -65,8 +67,13 @@ public class MyServerSocket {
                     MySocket mySocket = new MySocket(socket, MySocket.SOCKET_SERVER);
                     mySockets.add(mySocket);
 
+                    MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(),mySocket.ip + "已连接");
                     //向连接的客户端发送xml配置文件
                     File file = new File(EncodeFile.getSingleton().getXmlFilePath());
+                    if(!file.exists()){
+                        Log.e("hanhai","严重错误：server端xml配置文件不存在");
+                        continue;
+                    }
                     mySocket.sendSocketMsgContent(
                             new SocketMsgContent(SocketMsgContent.SERVER_MSG, SocketMsgContent.XML_PRATNO, file));
 
@@ -87,7 +94,7 @@ public class MyServerSocket {
         switchTimer = new Timer();
         // 加入随机值
         Random random = new Random();
-        int rnd = random.nextInt(10);
+        int rnd = random.nextInt(15);
 
         switchTimer.schedule(new TimerTask() {
             @Override
