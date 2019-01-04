@@ -3,7 +3,9 @@ package com.example.zpc.file.util;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Environment;
+import android.os.StrictMode;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -16,6 +18,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.nio.channels.FileChannel;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -42,7 +45,7 @@ public class Utils {
     }
 
     /*** 获取文件夹大小 ***/
-    public static long getFolderSize(File f){
+    public static long getFolderSize(File f) {
         long size = 0;
         File flist[] = f.listFiles();
         for (int i = 0; i < flist.length; i++) {
@@ -56,12 +59,13 @@ public class Utils {
     }
 
     //获取文件夹下 项目数
-    public static long getFolderItemNum(File f){
+    public static long getFolderItemNum(File f) {
         long size = 0;
         File flist[] = f.listFiles();
         size = flist.length;
         return size;
     }
+
     /**
      * 通过传入的路径,返回该路径下的所有的文件和文件夹列表
      *
@@ -95,7 +99,7 @@ public class Utils {
                     //item.bytesize = getFolderSize(file);
                     //item.size = getSize(item.bytesize);//大小
                     //若是文件夹显示项数
-                    item.size = getFolderItemNum(file)+"项 ";
+                    item.size = getFolderItemNum(file) + "项 ";
                     item.type = MainActivity.T_DIR;
 
                 } else if (file.isFile()) {// 文件
@@ -278,6 +282,15 @@ public class Utils {
      * @param aFile
      */
     public static void openFile(Context context, File aFile) {
+        // 适配Android 7.0 以上版本
+        if (Build.VERSION.SDK_INT >= 24) {
+            try {
+                Method m = StrictMode.class.getMethod("disableDeathOnFileUriExposure");
+                m.invoke(null);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
 
         // 实例化意图
         Intent intent = new Intent();
@@ -323,6 +336,8 @@ public class Utils {
                 // 发送意图
                 context.startActivity(intent);
             } catch (Exception e) {
+                e.printStackTrace();
+                Log.e("hanhai", e.toString());
                 Toast.makeText(context, "没有找到适合打开此文件的应用", Toast.LENGTH_SHORT).show();
             }
 
@@ -465,14 +480,15 @@ public class Utils {
 
     /**
      * 在给定的文件夹目录下,粘贴上之前标记的文件夹中所有的内容(递归)
+     *
      * @param targetDir 目标文件夹的路径
-     * @param dir 待考的文件夹对象
+     * @param dir       待考的文件夹对象
      * @return
      */
     public static int pasteDir(String targetDir, File dir) {
         // 生成目的地文件对象  targetDir=/temp, dir = abc
         //newDir = /temp/abc/....
-        File newDir = new File(targetDir , dir.getName());
+        File newDir = new File(targetDir, dir.getName());
         // 生成这个newDir所对应的路径
         newDir.mkdirs();
 
@@ -484,11 +500,11 @@ public class Utils {
         if (files != null && files.length > 0) {// 非空验证
             for (File file : files) {// foreach循环遍历
                 // 2. 对每个子元素进行
-                if (file.isFile()){// 复制文件
-                    pasteFile(newDir.getAbsolutePath(),file);
+                if (file.isFile()) {// 复制文件
+                    pasteFile(newDir.getAbsolutePath(), file);
                 }
-                if (file.isDirectory()){// 复制文件夹!!!
-                    pasteDir(newDir.getAbsolutePath(),file);// 递归调用
+                if (file.isDirectory()) {// 复制文件夹!!!
+                    pasteDir(newDir.getAbsolutePath(), file);// 递归调用
                 }
             }//for
         }// if

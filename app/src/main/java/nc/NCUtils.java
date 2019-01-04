@@ -15,7 +15,7 @@ public class NCUtils {
         //申请有限域
         InitGalois();
 
-        Log.e("hanhai","载入native-cpp");
+        Log.e("hanhai", "载入native-cpp");
     }
 
     //用于实现反射  根据方法名调用方法
@@ -33,6 +33,9 @@ public class NCUtils {
         return ret;
     }
 
+    public static void test(){
+
+    }
 
     /**
      * 只生成一个再编码文件
@@ -114,7 +117,7 @@ public class NCUtils {
     public static native void UninitGalois();
 
     //矩阵相乘
-    private static native byte[] Multiply(byte[] matrix1, int row1, int col1, byte[] matrix2, int row2, int col2);
+    public static native byte[] Multiply(byte[] matrix1, int row1, int col1, byte[] matrix2, int row2, int col2);
 
     //矩阵相乘
     public static native void Multiply2(byte[] matrix1, int row1, int col1, byte[] matrix2, int row2, int col2, byte[] ret);

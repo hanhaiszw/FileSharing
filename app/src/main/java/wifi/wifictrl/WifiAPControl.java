@@ -70,6 +70,11 @@ public class WifiAPControl {
                 ConnectConstant.MY_SSID, ConnectConstant.AP_PASSWORD, WifiAPBase.KEY_WPA);
         apAdmin.startAp(wifiConfiguration);
 
+//        while(true){
+//            if(apAdmin.isWifiApEnabled()){
+//                break;
+//            }
+//        }
         state = STATE_AP;
     }
     private void closeAP() {
@@ -79,8 +84,29 @@ public class WifiAPControl {
     }
 
     private void openWifi() {
+        Log.i("hanhai","准备打开wifi");
+
         closeAP();
-        wifiAdmin.openWifi();
+
+        // 为了适配Android8.0   AP关闭缓慢导致wifi打开失败的问题
+        Timer timer = new Timer();
+        long startTime = System.currentTimeMillis();
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                if(!wifiAdmin.isWifiEnabled()){
+                    wifiAdmin.openWifi();
+                }else{
+                    timer.cancel();
+                }
+                // 超过3秒还没连接上时，取消定时器
+                if (System.currentTimeMillis() - startTime > 3 * 1000) {
+                    timer.cancel();
+                }
+            }
+        }, 0, 1000);
+
+
         state = STATE_WIFI;
         hasUsefulSSID = false;
         connectNeedWifiSuccess = false;
@@ -102,6 +128,8 @@ public class WifiAPControl {
      * 开启server状态
      */
     public void openServer() {
+        Log.i("hanhai","准备打开ap");
+
         // 文件没有准备好 无法开启服务
         if (!EncodeFile.getSingleton().isInitSuccess()) {
             MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(), "编码文件没有准备好，无法开启服务");
@@ -115,6 +143,9 @@ public class WifiAPControl {
         // 开启serverSocket
         myServerSocket.openServer(ConnectConstant.SERVER_PORT);
         MainActivity.sendMsg2UIThread(MsgType.SERVER_STATE_FLAG.ordinal(),"");
+
+
+        Log.i("hanhai","ap打开成功");
     }
 
 
@@ -163,8 +194,9 @@ public class WifiAPControl {
      * wifi广播处理方法
      */
     public void openWifiSuccess() {
+        //
         if (state == STATE_WIFI) {
-            Log.e("hanhai", "打开wifi成功");
+            Log.i("hanhai","wifi打开成功");
             MainActivity.sendMsg2UIThread(
                     MsgType.SHOW_MSG.ordinal(), "打开wifi成功");
             // 加快wifi扫描热点的速度
@@ -179,9 +211,6 @@ public class WifiAPControl {
                     wifiAdmin.startScan();
                 }
             }, 0, 1000);
-
-
-
         }
     }
 
@@ -189,7 +218,7 @@ public class WifiAPControl {
     public void connectWifiSuccess(String ssid) {
         // 这里执行连接ServerSocket逻辑
         // 不能在主线程执行连接网络操作
-        Log.e("hanhai", "连接wifi成功");
+        Log.i("hanhai", "连接wifi成功");
         if (state == STATE_WIFI && !connectNeedWifiSuccess) {
             //连接的wifi不是需要的
             String wifiAdminSSID = wifiAdmin.currentConnectSSID();
@@ -197,7 +226,7 @@ public class WifiAPControl {
                 wifiAdmin.connectAP(ssidSelect.selectedSSID);
                 return;
             }
-            Log.e("hanhai", wifiAdminSSID);
+            Log.i("hanhai", wifiAdminSSID);
 
             connectNeedWifiSuccess = true;
 
@@ -207,11 +236,11 @@ public class WifiAPControl {
                 @Override
                 public void run() {
                     if (wifiAdmin.isWifiConnected()) {
-                        Log.e("hanhai", "wifi可以使用了");
+                        Log.i("hanhai", "wifi可以使用了");
                         myClientSocket.connect(ConnectConstant.SERVER_IP, ConnectConstant.SERVER_PORT);
                         timer.cancel();
                     } else {
-                        //Log.e("hanhai", "wifi不可用");
+                        //Log.i("hanhai", "wifi不可用");
                     }
                     // 超过5秒还没连接上时，取消定时器
                     // 尝试切换为server状态
@@ -225,16 +254,16 @@ public class WifiAPControl {
 
     // 在此判断需要连接哪个wifi
     public void wifiScanSuccess() {
-        Log.e("hanhai", "state = " + state + "  hasUsefulSSID = " + hasUsefulSSID);
+        Log.v("hanhai", "state = " + state + "  hasUsefulSSID = " + hasUsefulSSID);
         if (state == STATE_WIFI && !hasUsefulSSID) {
-            Log.e("hanhai", "处理热点列表");
+            Log.v("hanhai", "处理热点列表");
 
             List<ScanResult> list = wifiAdmin.getWifiScanResult();
             String ssid = ssidSelect.selectSSID(list);
             if (ssid != null) {
                 hasUsefulSSID = true;
                 String currentSSID = wifiAdmin.currentConnectSSID();
-                Log.d("hanhai", "currentSSID = " + currentSSID);
+                Log.v("hanhai", "currentSSID = " + currentSSID);
                 if (currentSSID.equals("\"" + ssid + "\"")) {
                     connectWifiSuccess(ssid);
                 } else {

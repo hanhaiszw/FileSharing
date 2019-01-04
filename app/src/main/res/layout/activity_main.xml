@@ -82,6 +82,7 @@
         android:layout_height="wrap_content"
         android:text="选择文件" />
     <Button
+        android:visibility="gone"
         android:id="@+id/btn_test"
         style="@android:style/Widget.Button"
         android:layout_width="match_parent"

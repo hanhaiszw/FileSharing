@@ -80,7 +80,7 @@ public class EncodeFile {
             encodeFileSingleton = xml2obj(xmlFilePath);
             encodeFileSingleton.initSuccess = true;
             String className = encodeFileSingleton.partFileVector.get(0).getClass().getName();
-            Log.e("hanhai", className);
+            Log.v("hanhai", className);
         }
     }
 
@@ -93,6 +93,7 @@ public class EncodeFile {
 
     //对文件进行分片预处理
     private void init(File file, int K, String runModeString) {
+
         this.AndroidId = ConstantData.ANDROID_ID;
         this.fileName = file.getName();
         this.K = K;
@@ -121,6 +122,14 @@ public class EncodeFile {
 
         //写入配置文件
         object2xml();
+
+        // 文件源初始化文件
+        String msg = "文件源初始化文件: " + folderPath;
+        String fileMsg = ToolUtils.getCurrentTime() + "\n"+ msg  + "\n";
+        MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(),msg);
+        byte[] bt_fileMsg = fileMsg.getBytes();
+        ToolUtils.writeToFile(CachePath.LOG_PATH, CachePath.LOG_FILE_NAME, bt_fileMsg, bt_fileMsg.length, true);
+
     }
 
     //把对象保存在xml文件中
@@ -230,7 +239,6 @@ public class EncodeFile {
         File xmlFile = new File(xmlFilePath);
 
 
-
         if (xmlFile.exists()) {
             encodeFileSingleton = xml2obj(xmlFilePath);
         } else {
@@ -254,6 +262,17 @@ public class EncodeFile {
             //写入配置文件
             newEncodeFile.object2xml();
             encodeFileSingleton = newEncodeFile;
+
+
+            // 第一次接收到文件信息:
+            String msg = "第一次接收到文件信息: " + newEncodeFile.folderPath;
+            String fileMsg = ToolUtils.getCurrentTime() + "\n"+ msg  + "\n";
+            MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(),msg);
+
+            byte[] bt_fileMsg = fileMsg.getBytes();
+            ToolUtils.writeToFile(CachePath.LOG_PATH, CachePath.LOG_FILE_NAME, bt_fileMsg, bt_fileMsg.length, true);
+
+
         }
         return encodeFileSingleton;
     }
@@ -261,7 +280,7 @@ public class EncodeFile {
     //恢复文件
     public synchronized void recover() {
 
-        if(!initSuccess) return;
+        if (!initSuccess) return;
 
         //片文件数目不足以恢复原文件
         if (currentPieceNum < partNum * K) {
@@ -275,36 +294,57 @@ public class EncodeFile {
             return;
         }
 
+
         //文件已经被恢复了
-        if(ToolUtils.isFileExists(folderPath,fileName)){
+        if (ToolUtils.isFileExists(folderPath, fileName)) {
             return;
         }
+
+        // 接收到所有的文件片
+        String msg = "文件接收完全，开始解码: " + folderPath;
+        String fileMsg = ToolUtils.getCurrentTime() + "\n"+ msg  + "\n";
+        MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(),msg);
+
+        byte[] bt_fileMsg = fileMsg.getBytes();
+        ToolUtils.writeToFile(CachePath.LOG_PATH, CachePath.LOG_FILE_NAME, bt_fileMsg, bt_fileMsg.length, true);
+
 
         //开始解码恢复文件
         MyThreadPool.execute(() -> {
             Log.d("hanhai", "开始恢复数据");
-            MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(),"开始恢复数据");
+            MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(), "开始恢复数据");
             File[] files = new File[partNum];
 
             for (PartFile partFile : partFileVector) {
+                Log.i("hanhai", "开始解码");
                 File file = partFile.decodePartFile();
+                Log.i("hanhai", "解码结束");
                 if (file == null)
                     return;
                 int index = partFile.partNo - 1;
                 files[index] = file;
             }
 
+            Log.i("hanhai", "开始拼接数据");
             String outFilePath = folderPath + File.separator + fileName;
             ToolUtils.mergeFiles(outFilePath, files);
+            Log.i("hanhai", "拼接数据完成");
 
             Log.d("hanhai", "恢复数据成功");
-            MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(),"恢复数据成功");
+            MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(), "恢复数据成功");
+
             // 打开文件
-            ToolUtils.openFile(MainActivity.getContext(),outFilePath);
+            //ToolUtils.openFile(MainActivity.getContext(),outFilePath);
         });
 
     }
 
+    // 实验测试方法
+    public void test() {
+        for (PartFile partFile : partFileVector) {
+            partFile.reencodePartFile();
+        }
+    }
 
     //接收到文件后 存储文件
     public void savePartFile(SocketMsgContent socketMsgContent) {
@@ -332,7 +372,7 @@ public class EncodeFile {
         Vector<byte[]> requestVector = new Vector<>();
 
         // 为什么这里会为空
-        if(itsEncodeFile == null){
+        if (itsEncodeFile == null) {
             return requestVector;
         }
 
@@ -350,7 +390,6 @@ public class EncodeFile {
         }
         return requestVector;
     }
-
 
 
     /**

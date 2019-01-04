@@ -167,6 +167,12 @@ public class MainActivity extends AppCompatActivity {
 
     @OnClick(R.id.btn_test)
     public void test1() {
+        //NCUtils.test();
+
+        //EncodeFile.getSingleton().recover();
+        // 再编码测试
+        //EncodeFile.getSingleton().test();
+
     }
 
     @OnClick(R.id.btn_switch_view)
@@ -223,6 +229,10 @@ public class MainActivity extends AppCompatActivity {
                 case CLIENT_STATE_FLAG:
                     setClientFlag();
                     break;
+                case OPEN_FILE:
+                    File file = (File) msg.obj;
+                    com.example.zpc.file.util.Utils.openFile(context, file);
+                    break;
                 default:
                     break;
             }
@@ -248,19 +258,19 @@ public class MainActivity extends AppCompatActivity {
         if (requestCode == REQUEST_CODE_WRITE_SETTINGS) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 if (Settings.System.canWrite(this)) {
-                    Log.i("hanhai", "onActivityResult write settings granted" );
-                }else{
-                    Log.i("hanhai", "onActivityResult write settings 被拒绝" );
+                    Log.i("hanhai", "onActivityResult write settings granted");
+                } else {
+                    Log.i("hanhai", "onActivityResult write settings 被拒绝");
                 }
             }
-        }else if (resultCode == RESULT_OK) {
+        } else if (resultCode == RESULT_OK) {
             if (requestCode == REQUEST_CODE_FROM_ACTIVITY) {
                 //在这里获取到选择的文件完整路径
                 List<String> list = data.getStringArrayListExtra("paths");
                 //这里用的单选
                 String filePath = list.get(0);
                 //Toast.makeText(context, filePath, Toast.LENGTH_SHORT).show();
-                Log.e("hanhai", filePath);
+                Log.v("hanhai", filePath);
                 File file = new File(filePath);
                 solveSelectFile(file);
             }
@@ -275,7 +285,7 @@ public class MainActivity extends AppCompatActivity {
                 .positiveText("确认")
                 .items(new String[]{RunMode.OD_MODE, RunMode.RS_MODE, RunMode.NC_MODE})
                 .itemsCallbackSingleChoice(-1, (dialog, view, which, text) -> {
-                    Log.e("hanhai", text.toString());
+                    Log.v("hanhai", text.toString());
                     runMode.runModeString = text.toString();
                     //更新标题
                     setTitle(text);
@@ -288,11 +298,11 @@ public class MainActivity extends AppCompatActivity {
                     MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(), info);
 
                     MyThreadPool.execute(() -> {
-                        Log.d("hanhai", "文件预处理开始");
+                        Log.i("hanhai", "文件预处理开始");
                         MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(), "文件预处理开始");
                         EncodeFile.updateSingleton(file, runMode.K, runMode.runModeString);
                         sendMsg2UIThread(MsgType.ENCODE_FILE_CHANGE.ordinal(), "");
-                        Log.d("hanhai", "文件预处理结束");
+                        Log.i("hanhai", "文件预处理结束");
                         MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(), "文件预处理结束");
                     });
                 })
@@ -356,7 +366,7 @@ public class MainActivity extends AppCompatActivity {
                 if (file.isFile()) {
                     ToolUtils.deleteFile(file);
                 } else if (file.isDirectory()) {
-                    if(!file.getPath().equals(encodeFilePath)){
+                    if (!file.getPath().equals(encodeFilePath)) {
                         ToolUtils.deleteDir(file);
                     }
                 }
@@ -488,6 +498,7 @@ public class MainActivity extends AppCompatActivity {
                 })
                 .start();
     }
+
     private static final int REQUEST_CODE_WRITE_SETTINGS = 1;
 
     /**
@@ -499,7 +510,7 @@ public class MainActivity extends AppCompatActivity {
             if (!Settings.System.canWrite(this)) {
                 Intent intent = new Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS);
                 intent.setData(Uri.parse("package:" + getPackageName()));
-                startActivityForResult(intent, REQUEST_CODE_WRITE_SETTINGS );
+                startActivityForResult(intent, REQUEST_CODE_WRITE_SETTINGS);
             }
         }
     }

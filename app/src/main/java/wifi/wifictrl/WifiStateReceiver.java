@@ -34,12 +34,12 @@ public class WifiStateReceiver extends BroadcastReceiver {
 
         } else if (intent.getAction().equals(WifiManager.NETWORK_STATE_CHANGED_ACTION)) {//wifi连接上与否
             // System.out.println("网络状态改变");
-            // Log.e("hanhai","网络状态改变");
+            // Log.i("hanhai","网络状态改变");
             NetworkInfo info = intent.getParcelableExtra(WifiManager.EXTRA_NETWORK_INFO);
             if (info.getState().equals(NetworkInfo.State.DISCONNECTED)) {
                 System.out.println("wifi网络连接断开");
                 if(isConnect){
-                    Log.e("hanhai", "wifi网络连接断开");
+                    Log.v("hanhai", "wifi网络连接断开");
                     isConnect = false;
                 }
             } else if (info.getState().equals(NetworkInfo.State.CONNECTED)) {
@@ -52,7 +52,7 @@ public class WifiStateReceiver extends BroadcastReceiver {
                 }
                 System.out.println("连接到网络 " + ssid);
                 if(!isConnect || !lastSSID.equals(ssid)){
-                    Log.e("hanhai", "连接到网络 " + wifiInfo.getSSID());
+                    Log.v("hanhai", "连接到网络 " + wifiInfo.getSSID());
                     lastSSID = ssid;
                     isConnect = true;
                     MainActivity.sendMsg2UIThread(
@@ -63,10 +63,10 @@ public class WifiStateReceiver extends BroadcastReceiver {
             int wifistate = intent.getIntExtra(WifiManager.EXTRA_WIFI_STATE, WifiManager.WIFI_STATE_DISABLED);
             if (wifistate == WifiManager.WIFI_STATE_DISABLED) {
                 System.out.println("系统关闭wifi");
-                Log.e("hanhai", "系统关闭wifi");
+                Log.v("hanhai", "系统关闭wifi");
             } else if (wifistate == WifiManager.WIFI_STATE_ENABLED) {
                 System.out.println("系统开启wifi");
-                Log.e("hanhai", "系统开启wifi");
+                Log.v("hanhai", "系统开启wifi");
                 // 扫描wifi列表
                 WifiManager wifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
                 wifiManager.startScan(); //<<<这里
@@ -85,8 +85,8 @@ public class WifiStateReceiver extends BroadcastReceiver {
             //WifiManager wifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
 //            List<ScanResult> list = wifiManager.getScanResults();
 //            for (int i = 0; i < list.size(); i++) {
-//                Log.e("hanhai", list.get(i).toString());
-//                Log.e("hanhai", "ScanResult SSID = " + list.get(i).SSID);
+//                Log.i("hanhai", list.get(i).toString());
+//                Log.i("hanhai", "ScanResult SSID = " + list.get(i).SSID);
 //            }
 
         }

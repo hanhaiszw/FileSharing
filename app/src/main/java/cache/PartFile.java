@@ -1,5 +1,7 @@
 package cache;
 
+import android.util.Log;
+
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 import com.thoughtworks.xstream.annotations.XStreamAsAttribute;
 import com.thoughtworks.xstream.annotations.XStreamOmitField;
@@ -164,7 +166,9 @@ abstract class PartFile {
      *
      * @return
      */
-    private File reencodePartFile() {
+    public File reencodePartFile() {
+        Log.i("hanhai","再编码开始");
+
         Vector<File> files = null;
         try {
             readWriteLock.readLock().lock();
@@ -239,6 +243,7 @@ abstract class PartFile {
             return null;
         }
 
+        Log.i("hanhai","再编码结束");
         return retFile;
     }
 

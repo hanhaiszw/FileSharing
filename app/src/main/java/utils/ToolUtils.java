@@ -4,6 +4,8 @@ import android.content.Context;
 import android.os.Environment;
 
 
+import com.example.mroot.filesharing.MainActivity;
+
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -18,6 +20,8 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Vector;
+
+import data.MsgType;
 
 public class ToolUtils {
     private ToolUtils() {
@@ -278,7 +282,7 @@ public class ToolUtils {
      * @param aFile
      */
     public static void openFile(Context context, File aFile) {
-        com.example.zpc.file.util.Utils.openFile(context, aFile);
+        MainActivity.sendMsg2UIThread(MsgType.OPEN_FILE.ordinal(),aFile);
     }
     public static void openFile(Context context, String aFile) {
         openFile(context, new File(aFile));

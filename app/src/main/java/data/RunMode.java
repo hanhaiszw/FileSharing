@@ -48,15 +48,15 @@ public class RunMode {
     public void initRunMode(Context context) {
         SharedPreferences pref = context.getSharedPreferences("data", MODE_PRIVATE);
         this.K = pref.getInt("K", 4);
-        Log.e("hanhai", K + "");
+        Log.v("hanhai", K + "");
         this.lastXMLFilePath = pref.getString("lastXMLFilePath", "");
-        Log.e("hanhai", lastXMLFilePath);
+        Log.v("hanhai", lastXMLFilePath);
 
         this.runModeString = pref.getString("runModeString", OD_MODE);
 
         this.selectStartPath = pref.getString("selectStartPath", "/storage/emulated/0");
 
-        Log.e("hanhai", runModeString);
+        Log.v("hanhai", runModeString);
     }
 
     @SuppressLint("ApplySharedPref")

@@ -1,6 +1,14 @@
 #include <jni.h>
 #include <string>
 #include "stdlib.h"
+#include <android/log.h>
+
+
+
+#define TAG "hanhai"
+#define LOGV(...) __android_log_print(ANDROID_LOG_VERBOSE, TAG, __VA_ARGS__)
+
+
 //#include "gf.c"
 //return NULL 时，用到了string库？？？
 //把有限域上的库直接整合在这里
@@ -13,6 +21,7 @@
 #define  gf_div(a, b)    (table_div[a][b])
 
 typedef unsigned int GFType;
+typedef unsigned char byte;
 //有限域
 int gFieldSize;
 //
@@ -213,110 +222,126 @@ Java_nc_NCUtils_InverseMatrix(JNIEnv *env, jobject thiz,
         env->ReleaseByteArrayElements(arrayData, olddata, 0);
         return NULL;
     }
-    int k = nK;
-    int nCol = nK;
-    //初始化有限域
-    //gf_init(8, 0x00000187);
-    //unsigned int M[k][k];
-    unsigned int **M = new unsigned int *[k];
-    for (int i = 0; i < k; ++i) {
-        M[i] = new unsigned int[k];
-    }
-    // k = nCol = nRow;
-    for (int i = 0; i < k; i++) {
-        for (int j = 0; j < k; j++) {
-            M[i][j] = pData[i * k + j];  // Copy the coefficient to M.
-        }
+
+
+    /************************************************************************/
+    /* Start to get the inverse matrix!                                     */
+    /************************************************************************/
+    int **N = new int *[nK];
+    for (int i = 0; i < nK; i++) {
+        N[i] = new int[2 * nK];
     }
 
-    //unsigned int IM[k][k];
-    unsigned int **IM = new unsigned int *[k];
-    for (int i = 0; i < k; ++i) {
-        IM[i] = new unsigned int[k];
-    }
-    // Init
-    for (int i = 0; i < k; i++) {
-        for (int j = 0; j < k; j++) {
-            if (i == j) {
-                IM[i][j] = 1;
+    // 一半写入原矩阵   一半写入单位矩阵
+    for (int i = 0; i < nK; i++) {
+
+        for (int j = 0; j < nK; j++) {
+            N[i][j] = pData[i * nK + j];
+            //LOGV("i = %d  j = %d  %d",i,j,N[i][j]);
+        }
+
+        for (int j = nK; j < 2 * nK; j++) {
+            if (i == j - nK) {
+                N[i][j] = 1;
             } else {
-                IM[i][j] = 0;
+                N[i][j] = 0;
             }
         }
     }
+
+
+
     /************************************************************************/
     /* Step 1. Change to a lower triangle matrix.                           */
     /************************************************************************/
-    for (int i = 0; i < nCol; i++) {
-        for (int j = i + 1; j < nCol; j++) {
-            // Now, the main element must be nonsingular.
-            GFType temp = gf_div(M[j][i], M[i][i]);
-
-            for (int z = 0; z < nCol; z++) {
-                M[j][z] = gf_add(M[j][z], gf_mul(temp, M[i][z]));
-                IM[j][z] = gf_add(IM[j][z], gf_mul(temp, IM[i][z]));
+    for (int i = 0; i < nK; i++) {
+        if (N[i][i] == 0) {
+            // recode this line
+            // exchange
+            for (int z = i + 1; z < nK; z++) {
+                if (N[z][i] != 0) {
+                    for (int x = 0; x < 2 * nK; x++) {
+                        int temp = N[i][x];
+                        N[i][x] = N[z][x];
+                        N[z][x] = temp;
+                    }
+                    break;
+                }
             }
         }
+
+        for (int j = i + 1; j < nK; j++) {
+            // Now, the main element must be nonsingular.
+            GFType temp = gf_div(N[j][i], N[i][i]);
+            for (int z = 0; z < 2 * nK; z++) {
+                N[j][z] = gf_add(N[j][z], gf_mul(temp, N[i][z]));
+            }
+        }
+
     }
+
+
+
     /************************************************************************/
     /* Step 2. Only the elements on the diagonal are non-zero.                  */
     /************************************************************************/
-    for (int i = 1; i < nCol; i++) {
-        for (int j = 0; j < i; j++) {
-            GFType temp = gf_div(M[j][i], M[i][i]);
-            for (int z = 0; z < nCol; z++) {
-                M[j][z] = gf_add(M[j][z], gf_mul(temp, M[i][z]));
-                IM[j][z] = gf_add(IM[j][z], gf_mul(temp, IM[i][z]));
+    for (int i = 1; i < nK; i++) {
+        for (int k = 0; k < i; k++) {
+            GFType temp = gf_div(N[k][i], N[i][i]);
+            for (int z = 0; z < 2 * nK; z++) {
+                N[k][z] = gf_add(N[k][z], gf_mul(temp, N[i][z]));
             }
         }
     }
+
     /************************************************************************/
     /* Step 3. The elements on the diagonal are 1.                  */
     /************************************************************************/
-    for (int i = 0; i < nCol; i++) {
-        if (M[i][i] != 1) {
-            GFType temp = M[i][i];
-            for (int z = 0; z < nCol; z++) {
-                M[i][z] = gf_div(M[i][z], temp);
-                IM[i][z] = gf_div(IM[i][z], temp);
+    for (int i = 0; i < nK; i++) {
+        if (N[i][i] != 1) {
+            GFType temp = N[i][i];
+            for (int z = 0; z < 2 * nK; z++) {
+                N[i][z] = gf_div(N[i][z], temp);
             }
         }
     }
-/*
-	LOGD("2Coeff, %d,  %d,  %d",IM[0][0],IM[0][1],IM[0][2]);
-	LOGD("2Coeff, %d,  %d,  %d",IM[1][0],IM[1][1],IM[1][2]);
-	LOGD("2Coeff, %d,  %d,  %d",IM[2][0],IM[2][1],IM[2][2]);
-*/
 
-    //unsigned char IMCopy[k * k];
-    //这个误写成unsigned int就会导致求逆出错
-    unsigned char *IMCopy = new unsigned char[k * k];
-    for (int i = 0; i < k; i++) {
-        for (int j = 0; j < k; j++) {
-            IMCopy[i * k + j] = IM[i][j];
+
+    /************************************************************************/
+    /* Get the new matrix.                                                  */
+    /************************************************************************/
+    byte *result = new byte[nK * nK];
+
+    for (int i = 0; i < nK; i++) {
+        for (int j = 0; j < nK; j++) {
+            result[i*nK + j] = (byte) N[i][j + nK];
         }
     }
-    //清空有限域
-    //gf_uninit();
 
-    jbyteArray jarrRV = env->NewByteArray(k * k);
-    jsize myLen = k * k;
-    jbyte *jby = (jbyte *) IMCopy;
+
+//    for (int i = 0; i < nK; ++i) {
+//        for (int j = 0; j < nK; ++j) {
+//            LOGV("i = %d  j = %d  %d", i, j, result[i*nK+j]);
+//        }
+//    }
+
+    jbyteArray jarrRV = env->NewByteArray(nK * nK);
+    jsize myLen = nK * nK;
+    jbyte *jby = (jbyte *) result;
     env->SetByteArrayRegion(jarrRV, 0, myLen, jby);
 
+    // 清空空间
     env->ReleaseByteArrayElements(arrayData, olddata, 0);
-    //释放数组
-    for (int i = 0; i < k; ++i) {
-        delete[] M[i];
-        delete[] IM[i];
+    for (int i = 0; i < nK; i++) {
+        delete[] N[i];
     }
-    delete[] M;
-    delete[] IM;
-    delete[] IMCopy;
+    delete[] N;
+    delete[] result;
+
     return jarrRV;
 }
 
-//求秩
+//求秩    nRow 不可大于 nCol
 JNIEXPORT jint JNICALL
 Java_nc_NCUtils_GetRank(JNIEnv *env, jobject instance, jbyteArray matrix, jint nRow, jint nCol) {
 

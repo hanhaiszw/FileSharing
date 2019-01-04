@@ -1,8 +1,13 @@
 package wifi.wifibase;
 
 import java.lang.reflect.Method;
+
 import android.content.Context;
 import android.net.wifi.WifiConfiguration;
+import android.net.wifi.WifiManager;
+import android.os.Build;
+import android.os.Handler;
+import android.support.annotation.RequiresApi;
 import android.util.Log;
 
 public class APAdmin extends WifiAPBase {
@@ -15,7 +20,7 @@ public class APAdmin extends WifiAPBase {
      * 配置Wifi AP
      *
      * @param wifiConfig 配置
-     * @param enable 是否开启， {@code true}为开启， {@code false}为关闭
+     * @param enable     是否开启， {@code true}为开启， {@code false}为关闭
      * @return {@code true} 操作成功, {@code false} 出现异常
      */
     private boolean setWifiAp(WifiConfiguration wifiConfig, boolean enable) {
@@ -23,15 +28,63 @@ public class APAdmin extends WifiAPBase {
             if (enable) {
                 closeWifi();// 开启热点需要关闭Wifi
             }
-            Method method =
-                    mWifiManager.getClass().getMethod("setWifiApEnabled", WifiConfiguration.class, boolean.class);
-            return (Boolean) method.invoke(mWifiManager, wifiConfig, enable);
+
+            // android 8.0在代码里无法配置热点信息的问题
+            // android 8.0适配 关闭ap
+            if (!enable) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    if (mReservation != null) {
+                        mReservation.close();
+                    }
+                    return true;
+                }
+            }
+
+            // android 8.0适配 打开ap
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                turnOnHotspot();
+                return true;
+            } else {
+                Method method =
+                        mWifiManager.getClass().getMethod("setWifiApEnabled", WifiConfiguration.class, boolean.class);
+                return (Boolean) method.invoke(mWifiManager, wifiConfig, enable);
+            }
+
         } catch (Exception e) {
             Log.e(this.getClass().toString(), "", e);
-            Log.e("hanhai",e.toString());
+            Log.e("hanhai", e.toString());
             return false;
         }
     }
+
+    private WifiManager.LocalOnlyHotspotReservation mReservation;
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    private void turnOnHotspot() {
+
+        mWifiManager.startLocalOnlyHotspot(new WifiManager.LocalOnlyHotspotCallback() {
+            @Override
+            public void onStarted(WifiManager.LocalOnlyHotspotReservation reservation) {
+                super.onStarted(reservation);
+                Log.d("hanhai", "Wifi Hotspot is on now");
+                mReservation = reservation;
+
+            }
+
+            @Override
+            public void onStopped() {
+                super.onStopped();
+                Log.d("hanhai", "onStopped: ");
+            }
+
+            @Override
+            public void onFailed(int reason) {
+                super.onFailed(reason);
+                Log.d("hanhai", "onFailed: ");
+            }
+        }, new Handler());
+    }
+
 
     /**
      * 按配置信息，开启AP模式
@@ -95,9 +148,8 @@ public class APAdmin extends WifiAPBase {
      * 检测 Wi-Fi AP 是否被开启
      *
      * @return {@code true} 如果 Wi-Fi AP 开启
-     * @see #getWifiApState()
-     *
      * @hide Dont open yet
+     * @see #getWifiApState()
      */
     public boolean isWifiApEnabled() {
         return getWifiApState() == WIFI_AP_STATE.WIFI_AP_STATE_ENABLED;
@@ -137,7 +189,7 @@ public class APAdmin extends WifiAPBase {
     /**
      * 设置 Wi-Fi AP 配置.
      *
-     * @param ssid 无线热点名
+     * @param ssid     无线热点名
      * @param passawrd 密码，长度>=8位
      * @return {@code true} 操作成功, {@code false} 出现异常
      */
@@ -150,7 +202,6 @@ public class APAdmin extends WifiAPBase {
         return super.makeConfiguration(ssid, passawrd, authAlogrithm, WIFI_AP_MODE);
 
     }
-
 
 
 }
