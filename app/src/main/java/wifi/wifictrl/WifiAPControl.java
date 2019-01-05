@@ -179,6 +179,7 @@ public class WifiAPControl {
         // 再连接wifi热点成功后执行
         MainActivity.sendMsg2UIThread(MsgType.CLIENT_STATE_FLAG.ordinal(),"");
 
+
         if(!click){
             Timer timer = new Timer();
             long startTime = System.currentTimeMillis();
