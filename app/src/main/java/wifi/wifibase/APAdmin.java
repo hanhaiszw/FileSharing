@@ -7,6 +7,7 @@ import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Handler;
+import android.provider.Settings;
 import android.support.annotation.RequiresApi;
 import android.util.Log;
 
@@ -40,16 +41,18 @@ public class APAdmin extends WifiAPBase {
                 }
             }
 
+
+
             // android 8.0适配 打开ap
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 turnOnHotspot();
                 return true;
             } else {
                 Method method =
-                        mWifiManager.getClass().getMethod("setWifiApEnabled", WifiConfiguration.class, boolean.class);
-                return (Boolean) method.invoke(mWifiManager, wifiConfig, enable);
+                        mWifiManager.getClass().getMethod("setWifiApEnabled", WifiConfiguration.class, Boolean.TYPE);
+                boolean ret = (Boolean) method.invoke(mWifiManager, wifiConfig, enable);
+                return ret;
             }
-
         } catch (Exception e) {
             Log.e(this.getClass().toString(), "", e);
             Log.e("hanhai", e.toString());

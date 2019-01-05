@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Vector;
 
 import connect.ConnectConstant;
+import connect.MySocket;
 
 /**
  * 选择热点的原则
@@ -27,6 +28,15 @@ public class SSIDSelect {
     }
 
     public String selectSSID(List<ScanResult> list) {
+        // 删除出现的空值
+        Iterator<SSIDInfo> it0 = ssidInfoConnected.iterator();
+        while (it0.hasNext()) {
+            SSIDInfo ssidInfo = it0.next();
+            if(ssidInfo.ssid == null){
+                it0.remove();
+            }
+        }
+
         Vector<SSIDInfo> newSSIDVector = new Vector<>();
         // 找到合适的热点
         for (int i = 0; i < list.size(); i++) {
@@ -58,10 +68,13 @@ public class SSIDSelect {
             }
         }
 
+
         // 更新权值
         boolean findSuccess = false;
         for (SSIDInfo ssidInfo : ssidInfoConnected) {
+
             ssidInfo.weight += 1 ;
+
             // 这里经常报空指针异常 为什么？？？
             try {
                 if (ssidInfo.ssid.equals(ssid)) {
@@ -79,7 +92,7 @@ public class SSIDSelect {
         }
 
 
-        // 把刚连接的热点权值设置为0
+        // 把刚连接的热点权值设置为0 -5
         for (SSIDInfo ssidInfo : newSSIDVector) {
             if (ssidInfo.equals(ssid)) {
                 ssidInfo.weight = LOW_WEIGHT;
@@ -90,7 +103,7 @@ public class SSIDSelect {
         Iterator<SSIDInfo> it = ssidInfoConnected.iterator();
         while (it.hasNext()) {
             SSIDInfo ssidInfo = it.next();
-            if (ssidInfo.weight == 0) {
+            if (ssidInfo.weight >= 0) {
                 it.remove();
             }
         }

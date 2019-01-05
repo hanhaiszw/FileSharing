@@ -29,7 +29,7 @@ public class MyClientSocket {
             //mySocket = new MySocket(socket,MySocket.SOCKET_CLIENT);
             //Socket socket = new Socket();
             //socket.connect(new InetSocketAddress(ip, port), 3000);//设置连接请求超时时间10 s
-            mySocket = new MySocket(socket,MySocket.SOCKET_CLIENT);
+            mySocket = new MySocket(socket, MySocket.SOCKET_CLIENT);
         } catch (Exception e) {
             e.printStackTrace();
             Log.e("hanhai", "连接服务器失败");
@@ -50,9 +50,9 @@ public class MyClientSocket {
             @Override
             public void run() {
                 // 当断开连接时  尝试切换向server
-                if(!mySocket.socketIsActive()){
+                if (mySocket == null || !mySocket.socketIsActive()) {
                     //切换向server
-                    MainActivity.sendMsg2UIThread(MsgType.CLIENT_2_SERVER.ordinal(),"");
+                    MainActivity.sendMsg2UIThread(MsgType.CLIENT_2_SERVER.ordinal(), "");
                     switchTimer.cancel();
                 }
             }
@@ -62,7 +62,7 @@ public class MyClientSocket {
 
     // 需要加入释放锁操作
     // 防止手动点击server按钮后  还会自动切换向
-    public void cancelSwitchTimer(){
+    public void cancelSwitchTimer() {
         try {
             switchTimer.cancel();
         } catch (Exception e) {

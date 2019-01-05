@@ -108,8 +108,12 @@ public class WifiAdmin extends WifiAPBase {
 
     //连接指定的AP
     public void connectAP(String ssid) {
+//        WifiConfiguration wifiConfiguration = makeConfiguration(
+//                ssid, ConnectConstant.AP_PASSWORD, WifiAPBase.KEY_WPA);
+
+        // 连接无密码ap
         WifiConfiguration wifiConfiguration = makeConfiguration(
-                ssid, ConnectConstant.AP_PASSWORD, WifiAPBase.KEY_WPA);
+                ssid, ConnectConstant.AP_PASSWORD, WifiAPBase.KEY_NONE);
         addNetwork(wifiConfiguration);
     }
 }

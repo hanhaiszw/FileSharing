@@ -422,6 +422,10 @@ public class EncodeFile {
         currentPieceNum += 1;
     }
 
+    public void setInitSuccess(boolean initSuccess) {
+        this.initSuccess = initSuccess;
+    }
+
     public boolean isInitSuccess() {
         return initSuccess;
     }

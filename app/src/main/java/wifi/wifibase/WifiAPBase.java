@@ -84,13 +84,17 @@ public class WifiAPBase {
                 mWifiManager.removeNetwork(tempConfiguration.networkId); // 从列表中删除指定的网络配置网络
             }
             if (authAlogrithm == KEY_NONE) { // 没有密码
-                customerWifiConfig.wepKeys[0] = "";
+                //customerWifiConfig.wepKeys[0] = "";
+                customerWifiConfig.wepKeys[0] = "\"" + "\"";
                 customerWifiConfig.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.NONE);
                 customerWifiConfig.wepTxKeyIndex = 0;
+
+
             } else if (authAlogrithm == KEY_WEP) { // WEP密码
                 customerWifiConfig.hiddenSSID = true;
                 customerWifiConfig.allowedAuthAlgorithms.set(WifiConfiguration.AuthAlgorithm.SHARED);
                 customerWifiConfig.wepKeys[0] = ("\"" + passawrd + "\"");
+
             } else { // WPA_PSK加密
                 customerWifiConfig.preSharedKey = ("\"" + passawrd + "\"");
                 customerWifiConfig.hiddenSSID = true;

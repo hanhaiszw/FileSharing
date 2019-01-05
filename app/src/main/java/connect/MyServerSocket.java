@@ -64,14 +64,21 @@ public class MyServerSocket {
                     Socket socket = serverSocket.accept();
                     acceptStartTime = System.currentTimeMillis();
 
+                    //最多只允许连接5个
+                    if (mySockets.size() >= 5) {
+                        socket.close();
+                        Log.e("hanhai","MyServerSocket数量已超过5，拒绝再次连接");
+                        continue;
+                    }
+
                     MySocket mySocket = new MySocket(socket, MySocket.SOCKET_SERVER);
                     mySockets.add(mySocket);
 
-                    MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(),mySocket.ip + "已连接");
+                    MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(), mySocket.ip + "已连接");
                     //向连接的客户端发送xml配置文件
                     File file = new File(EncodeFile.getSingleton().getXmlFilePath());
-                    if(!file.exists()){
-                        Log.e("hanhai","严重错误：server端xml配置文件不存在");
+                    if (!file.exists()) {
+                        Log.e("hanhai", "严重错误：server端xml配置文件不存在");
                         continue;
                     }
                     mySocket.sendSocketMsgContent(
@@ -122,7 +129,7 @@ public class MyServerSocket {
 
     // 需要加入释放锁操作
     // 防止手动点击client按钮后  还会自动切换向
-    public void cancelSwitchTimer(){
+    public void cancelSwitchTimer() {
         try {
             switchTimer.cancel();
         } catch (Exception e) {
