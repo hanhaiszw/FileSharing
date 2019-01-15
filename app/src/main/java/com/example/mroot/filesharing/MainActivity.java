@@ -122,8 +122,9 @@ public class MainActivity extends AppCompatActivity {
         //读取上一次的配置数据
         runMode.initRunMode(context);
 
-        EncodeFile.updateSingleton(runMode.lastXMLFilePath);
-        sendMsg2UIThread(MsgType.ENCODE_FILE_CHANGE.ordinal(), "");
+        // 不再执行对原有文件的初始化载入
+        // EncodeFile.updateSingleton(runMode.lastXMLFilePath);
+        // sendMsg2UIThread(MsgType.ENCODE_FILE_CHANGE.ordinal(), "");
 
         // 切换默认视图
         if (viewState == PROMPT_VIEW) {
@@ -168,11 +169,9 @@ public class MainActivity extends AppCompatActivity {
     @OnClick(R.id.btn_test)
     public void test1() {
         //NCUtils.test();
-
         //EncodeFile.getSingleton().recover();
         // 再编码测试
         //EncodeFile.getSingleton().test();
-
     }
 
     @OnClick(R.id.btn_switch_view)
@@ -199,13 +198,17 @@ public class MainActivity extends AppCompatActivity {
         public void handleMessage(final Message msg) {
             MsgType msgType = MsgType.values()[msg.what];
             switch (msgType) {
+                // 消息提示
                 case SHOW_MSG:
                     String prompt = msg.obj.toString();
                     setPrompt(prompt);
                     break;
+                // 更新状态球显示
                 case ENCODE_FILE_CHANGE:
                     updateEncodeFileInfo();
                     break;
+
+                // 处理wifi广播消息
                 case OPEN_WIFI_SUCCESS:
                     wifiAPControl.openWifiSuccess();
                     break;
@@ -217,6 +220,9 @@ public class MainActivity extends AppCompatActivity {
                     wifiAPControl.wifiScanSuccess();
                     break;
 
+
+                // 状态切换
+                //
                 case SERVER_2_CLIENT:
                     wifiAPControl.server2client();
                     break;
@@ -229,6 +235,10 @@ public class MainActivity extends AppCompatActivity {
                 case CLIENT_STATE_FLAG:
                     setClientFlag();
                     break;
+
+
+                // 打开文件
+                // 因为失败后，有可能使用Toast弹窗，所以需要在主线程执行
                 case OPEN_FILE:
                     File file = (File) msg.obj;
                     com.example.zpc.file.util.Utils.openFile(context, file);
@@ -366,9 +376,12 @@ public class MainActivity extends AppCompatActivity {
                 if (file.isFile()) {
                     ToolUtils.deleteFile(file);
                 } else if (file.isDirectory()) {
+                    // 不删除当前文件
                     if (!file.getPath().equals(encodeFilePath)) {
                         ToolUtils.deleteDir(file);
                     }
+                    // 删除所有文件
+                    //ToolUtils.deleteDir(file);
                 }
             }
         }

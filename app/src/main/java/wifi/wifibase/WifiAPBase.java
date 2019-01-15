@@ -148,7 +148,14 @@ public class WifiAPBase {
         if (this.mWifiManager.getConfiguredNetworks() == null) {
             return null;
         }
-        Iterator<WifiConfiguration> localIterator = this.mWifiManager.getConfiguredNetworks().iterator();
+        Iterator<WifiConfiguration> localIterator = null;
+        // 出现空指针异常报错
+        try {
+            localIterator = this.mWifiManager.getConfiguredNetworks().iterator();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
         WifiConfiguration localWifiConfiguration;
         do {
             if (!localIterator.hasNext()) {

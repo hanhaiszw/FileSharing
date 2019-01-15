@@ -34,4 +34,10 @@ class RSPartFile extends PartFile {
             afterODSendFile(file);
         }
     }
+
+
+    @Override
+    public String getMode() {
+        return "RS";
+    }
 }

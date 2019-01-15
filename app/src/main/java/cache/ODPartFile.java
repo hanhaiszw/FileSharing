@@ -16,6 +16,9 @@ class ODPartFile extends PartFile {
     public void afterSendFile(File file) {
         afterODSendFile(file);
     }
-
+    @Override
+    public String getMode() {
+        return "OD";
+    }
 
 }

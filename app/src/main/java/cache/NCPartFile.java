@@ -24,4 +24,9 @@ class NCPartFile extends PartFile {
     public void afterSendFile(File file) {
         afterNCSendFile(file);
     }
+
+    @Override
+    public String getMode() {
+        return "NC";
+    }
 }

@@ -554,4 +554,5 @@ abstract class PartFile {
     public abstract File getSendFile(byte[] coef);
 
     public abstract void afterSendFile(File file);
+    public abstract String getMode();
 }

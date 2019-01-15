@@ -18,11 +18,6 @@ public class NCUtils {
         Log.e("hanhai", "载入native-cpp");
     }
 
-    //用于实现反射  根据方法名调用方法
-    public final static String CLASS_NAME = "nc.NCUtils";
-    public final static String DECODE_METHOD_NAME = "decode";
-    public final static String REENCODE_METHOD_NAME = "reencode";
-
 
     private NCUtils() {
     }

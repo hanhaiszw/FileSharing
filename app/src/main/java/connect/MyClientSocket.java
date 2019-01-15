@@ -70,6 +70,18 @@ public class MyClientSocket {
             e.printStackTrace();
         }
     }
+
+
+    private boolean socketIsAlive() {
+        return mySocket != null && mySocket.socketIsActive();
+    }
+
+    // client存在异常
+    public boolean hasException() {
+        return !socketIsAlive();
+    }
+
+
 //    public void sendMsg(String msg) {
 //        if (mySocket != null) {
 //            mySocket.sendMsg(msg);
@@ -81,4 +93,5 @@ public class MyClientSocket {
 //            mySocket.sendFile(file);
 //        }
 //    }
+
 }

@@ -34,7 +34,7 @@ public class WifiAPControl {
     private final static int STATE_NONE = 0;
     private final static int STATE_WIFI = 1;
     private final static int STATE_AP = 2;
-    private int state;
+    private volatile int state;
 
     private MyServerSocket myServerSocket;
     private MyClientSocket myClientSocket;
@@ -43,7 +43,7 @@ public class WifiAPControl {
     private SSIDSelect ssidSelect;
     private boolean hasUsefulSSID;
     private boolean connectNeedWifiSuccess;
-    private boolean userClickClient;  // 用以标志是否是用户点击
+    //private boolean userClickClient;  // 用以标志是否是用户点击
 
     public WifiAPControl(Context context) {
         //this.context = context;
@@ -58,7 +58,10 @@ public class WifiAPControl {
         state = STATE_NONE;
         hasUsefulSSID = false;
         connectNeedWifiSuccess = false;
-        userClickClient = false;
+        // userClickClient = false;
+
+        // 处理异常 不可使用
+        // solveClientException();
     }
 
 
@@ -83,6 +86,7 @@ public class WifiAPControl {
 //        }
         state = STATE_AP;
     }
+
     private void closeAP() {
         apAdmin.stopAp();
         //
@@ -90,7 +94,7 @@ public class WifiAPControl {
     }
 
     private void openWifi() {
-        Log.i("hanhai","准备打开wifi");
+        Log.i("hanhai", "准备打开wifi");
 
         closeAP();
 
@@ -100,9 +104,9 @@ public class WifiAPControl {
         timer.schedule(new TimerTask() {
             @Override
             public void run() {
-                if(!wifiAdmin.isWifiEnabled()){
+                if (!wifiAdmin.isWifiEnabled()) {
                     wifiAdmin.openWifi();
-                }else{
+                } else {
                     timer.cancel();
                 }
                 // 超过3秒还没连接上时，取消定时器
@@ -126,15 +130,16 @@ public class WifiAPControl {
         wifiAdmin.deleteContainSSid();
         wifiAdmin.closeWifi();
         state = STATE_NONE;
+        hasUsefulSSID = false;
+        connectNeedWifiSuccess = false;
     }
-
 
 
     /**
      * 开启server状态
      */
     public void openServer() {
-        Log.i("hanhai","准备打开ap");
+        Log.i("hanhai", "准备打开ap");
 
         // 文件没有准备好 无法开启服务
         if (!EncodeFile.getSingleton().isInitSuccess()) {
@@ -150,10 +155,10 @@ public class WifiAPControl {
 
         // 开启serverSocket
         myServerSocket.openServer(ConnectConstant.SERVER_PORT);
-        MainActivity.sendMsg2UIThread(MsgType.SERVER_STATE_FLAG.ordinal(),"");
+        MainActivity.sendMsg2UIThread(MsgType.SERVER_STATE_FLAG.ordinal(), "");
 
 
-        Log.i("hanhai","ap打开成功");
+        Log.i("hanhai", "ap打开成功");
     }
 
 
@@ -161,13 +166,13 @@ public class WifiAPControl {
      * 开启client状态
      */
     public void openClient() {
-       openClient(false);
+        openClient(false);
     }
 
     // 是否是手动点击的
     // 当是手动点击时   不允许切换
-    public void openClient(boolean click){
-        userClickClient = click;
+    public void openClient(boolean click) {
+        //userClickClient = click;
         // 取消myServerSocket的自动切换动作
         myServerSocket.cancelSwitchTimer();
         myClientSocket.cancelSwitchTimer();
@@ -177,10 +182,9 @@ public class WifiAPControl {
         // 异步方法
         // 连接server的操作不能在此执行
         // 再连接wifi热点成功后执行
-        MainActivity.sendMsg2UIThread(MsgType.CLIENT_STATE_FLAG.ordinal(),"");
+        MainActivity.sendMsg2UIThread(MsgType.CLIENT_STATE_FLAG.ordinal(), "");
 
-
-        if(!click){
+        if (!click) {
             Timer timer = new Timer();
             long startTime = System.currentTimeMillis();
             timer.schedule(new TimerTask() {
@@ -197,11 +201,9 @@ public class WifiAPControl {
                     }
                 }
             }, 0, 1000);
-        }else{
+        } else {
             // 阻止其自动切换
-
         }
-
     }
 
     /**
@@ -210,7 +212,7 @@ public class WifiAPControl {
     public void openWifiSuccess() {
         //
         if (state == STATE_WIFI) {
-            Log.i("hanhai","wifi打开成功");
+            Log.i("hanhai", "wifi打开成功");
 
             // 加快wifi扫描热点的速度
             Timer scanTimer = new Timer();
@@ -226,6 +228,7 @@ public class WifiAPControl {
             }, 0, 1000);
         }
     }
+
     public void connectWifiSuccess(String ssid) {
         // 这里执行连接ServerSocket逻辑
         // 不能在主线程执行连接网络操作
@@ -264,6 +267,7 @@ public class WifiAPControl {
             }, 0, 100);
         }
     }
+
     // 在此判断需要连接哪个wifi
     public void wifiScanSuccess() {
         Log.v("hanhai", "state = " + state + "  hasUsefulSSID = " + hasUsefulSSID);
@@ -300,10 +304,11 @@ public class WifiAPControl {
     }
 
     public void client2server() {
-        if(userClickClient){
-            openClient();
-            return;
-        }
+//        if(userClickClient){
+//            openClient();
+//            return;
+//        }
+
         if (EncodeFile.getSingleton().isInitSuccess()) {
             // 需不需要等获取到一半数据后再准许切换向server
             EncodeFile encodeFile = EncodeFile.getSingleton();
@@ -329,5 +334,29 @@ public class WifiAPControl {
         closeAP();
     }
 
+
+    /**
+     * 程序运行中   可能会卡到client模式，既不接收数据，也不会切换模式
+     * 使用此方法定时检测异常
+     * 慎用定时器
+     * 不可使用
+     */
+    private void solveClientException() {
+        Timer solveExpTimer = new Timer();
+        solveExpTimer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                if (state == STATE_WIFI) {
+                    if (connectNeedWifiSuccess && myClientSocket.hasException()) {
+                        openClient();
+                    }
+                } else if (state == STATE_AP) {
+                    if (!apAdmin.isWifiApEnabled()) {
+                        openServer();
+                    }
+                }
+            }
+        }, 10000, 10000);
+    }
 
 }

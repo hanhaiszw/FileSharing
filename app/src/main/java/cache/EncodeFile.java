@@ -124,7 +124,7 @@ public class EncodeFile {
         object2xml();
 
         // 文件源初始化文件
-        String msg = "文件源初始化文件: " + folderPath;
+        String msg = runModeString + ": 文件源初始化文件: " + folderPath;
         String fileMsg = ToolUtils.getCurrentTime() + "\n"+ msg  + "\n";
         MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(),msg);
         byte[] bt_fileMsg = fileMsg.getBytes();
@@ -265,7 +265,7 @@ public class EncodeFile {
 
 
             // 第一次接收到文件信息:
-            String msg = "第一次接收到文件信息: " + newEncodeFile.folderPath;
+            String msg = newEncodeFile.runModeString +": 第一次接收到文件信息: " + newEncodeFile.folderPath;
             String fileMsg = ToolUtils.getCurrentTime() + "\n"+ msg  + "\n";
             MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(),msg);
 
@@ -280,7 +280,8 @@ public class EncodeFile {
     //恢复文件
     public synchronized void recover() {
 
-        if (!initSuccess) return;
+        if (!initSuccess)
+            return;
 
         //片文件数目不足以恢复原文件
         if (currentPieceNum < partNum * K) {
@@ -301,7 +302,7 @@ public class EncodeFile {
         }
 
         // 接收到所有的文件片
-        String msg = "文件接收完全，开始解码: " + folderPath;
+        String msg = runModeString + ": 文件接收完全，开始解码: " + folderPath;
         String fileMsg = ToolUtils.getCurrentTime() + "\n"+ msg  + "\n";
         MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(),msg);
 
@@ -347,7 +348,7 @@ public class EncodeFile {
     }
 
     //接收到文件后 存储文件
-    public void savePartFile(SocketMsgContent socketMsgContent) {
+    public synchronized void savePartFile(SocketMsgContent socketMsgContent) {
         int partNo = socketMsgContent.partNo;
         for (PartFile partFile : partFileVector) {
             if (partFile.partNo == partNo) {
