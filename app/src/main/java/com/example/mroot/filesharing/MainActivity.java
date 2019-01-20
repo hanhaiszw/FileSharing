@@ -142,7 +142,6 @@ public class MainActivity extends AppCompatActivity {
         intentFilter.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
         wifiStateReceiver = new WifiStateReceiver();
         registerReceiver(wifiStateReceiver, intentFilter);
-
     }
 
 

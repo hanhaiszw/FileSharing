@@ -184,26 +184,26 @@ public class WifiAPControl {
         // 再连接wifi热点成功后执行
         MainActivity.sendMsg2UIThread(MsgType.CLIENT_STATE_FLAG.ordinal(), "");
 
-        if (!click) {
-            Timer timer = new Timer();
-            long startTime = System.currentTimeMillis();
-            timer.schedule(new TimerTask() {
-                @Override
-                public void run() {
-                    if (connectNeedWifiSuccess) {
-                        timer.cancel();
-                        return;
-                    }
-                    // 超过15秒还没连接上时，取消定时器
-                    if (System.currentTimeMillis() - startTime > 15 * 1000) {
-                        client2server();
-                        timer.cancel();
-                    }
-                }
-            }, 0, 1000);
-        } else {
-            // 阻止其自动切换
-        }
+//        if (!click) {
+//            Timer timer = new Timer();
+//            long startTime = System.currentTimeMillis();
+//            timer.schedule(new TimerTask() {
+//                @Override
+//                public void run() {
+//                    if (connectNeedWifiSuccess) {
+//                        timer.cancel();
+//                        return;
+//                    }
+//                    // 超过15秒还没连接上时，取消定时器
+//                    if (System.currentTimeMillis() - startTime > 15 * 1000) {
+//                        client2server();
+//                        timer.cancel();
+//                    }
+//                }
+//            }, 0, 1000);
+//        } else {
+//            // 阻止其自动切换
+//        }
     }
 
     /**
