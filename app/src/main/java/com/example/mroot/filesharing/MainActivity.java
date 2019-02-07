@@ -1,6 +1,7 @@
 package com.example.mroot.filesharing;
 
 import android.annotation.SuppressLint;
+import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -142,6 +143,7 @@ public class MainActivity extends AppCompatActivity {
         intentFilter.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
         wifiStateReceiver = new WifiStateReceiver();
         registerReceiver(wifiStateReceiver, intentFilter);
+
     }
 
 
@@ -171,6 +173,25 @@ public class MainActivity extends AppCompatActivity {
         //EncodeFile.getSingleton().recover();
         // 再编码测试
         //EncodeFile.getSingleton().test();
+    }
+
+    // 恢复初始化
+    @OnClick(R.id.btn_initial)
+    public void recoverInitial() {
+        wifiAPControl.closeWifiAp();
+
+        // EncodeFile.getSingleton().setInitSuccess(false);
+        clearCache();
+        EncodeFile.updateSingleton();
+        updateEncodeFileInfo();
+        setInitFlag();
+        //ActivityManager manager = (ActivityManager)this.getSystemService(Context.ACTIVITY_SERVICE);
+        //manager.restartPackage(getPackageName());
+//        onBackPressed();
+//        onBackPressed();
+        //Intent intent = new Intent(this, Object.class);
+
+        //startActivity(intent);
     }
 
     @OnClick(R.id.btn_switch_view)
@@ -220,7 +241,7 @@ public class MainActivity extends AppCompatActivity {
                     break;
 
 
-                // 状态切换
+                // wifi状态切换
                 //
                 case SERVER_2_CLIENT:
                     wifiAPControl.server2client();
@@ -257,6 +278,13 @@ public class MainActivity extends AppCompatActivity {
 
     private void setServerFlag() {
         btn_openServer.setTextColor(Color.RED);
+        btn_openClient.setTextColor(Color.BLACK);
+    }
+
+    // 恢复初始化状态
+    // 即server  client 都不变色
+    private void setInitFlag() {
+        btn_openServer.setTextColor(Color.BLACK);
         btn_openClient.setTextColor(Color.BLACK);
     }
 
@@ -318,9 +346,15 @@ public class MainActivity extends AppCompatActivity {
                 .show();
     }
 
+
     private void updateEncodeFileInfo() {
         EncodeFile encodeFile = EncodeFile.getSingleton();
         if (!encodeFile.isInitSuccess()) {
+            setTitle("FileSharing");
+            circleProgress.setProgress(0);
+            circleProgress.setPrefixText("");
+            circleProgress.setSuffixText("%");
+            tv_fileName.setText("");
             return;
         }
         runMode.runModeString = encodeFile.getRunModeString();
@@ -365,7 +399,22 @@ public class MainActivity extends AppCompatActivity {
 
     private void clearCache() {
         // 清空不必要的缓存
-        ToolUtils.deleteDir(CachePath.RECEIVE_TEMP_PATH);
+        // 清空ReceiveTemp目录
+        File receiveTemp = new File(CachePath.RECEIVE_TEMP_PATH);
+        if (receiveTemp.exists() && receiveTemp.isDirectory()) {
+            File[] files = receiveTemp.listFiles();
+            for (int i = 0; i < files.length; i++) {
+                File file = files[i];
+                if (file.isFile()) {
+                    ToolUtils.deleteFile(file);
+                } else if (file.isDirectory()) {
+                    ToolUtils.deleteDir(file);
+                }
+            }
+        }
+
+
+        // 清空Temp目录
         File folder = new File(CachePath.TEMP_PATH);
         if (folder.exists() && folder.isDirectory()) {
             File[] files = folder.listFiles();
@@ -454,7 +503,7 @@ public class MainActivity extends AppCompatActivity {
                         .inputType(InputType.TYPE_CLASS_NUMBER)
                         .input(runMode.K + "", null, (dialog, input) -> {
                             int k = Integer.parseInt(input.toString());
-                            if (k < 2 || k > 10) {
+                            if (k < 2 || k > 50) {  // 设置K值范围 2 到 50
                                 Toast.makeText(MainActivity.this, "K值在2到10之间", Toast.LENGTH_SHORT).show();
                             } else {
                                 if (k != runMode.K) {

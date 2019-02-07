@@ -65,7 +65,7 @@ public class MyServerSocket {
                     acceptStartTime = System.currentTimeMillis();
 
                     //最多只允许连接5个
-                    if (mySockets.size() >= 5) {
+                    if (mySockets.size() >= 3) {
                         socket.close();
                         Log.e("hanhai","MyServerSocket数量已超过5，拒绝再次连接");
                         continue;
@@ -103,6 +103,7 @@ public class MyServerSocket {
         Random random = new Random();
         int rnd = random.nextInt(15);
 
+        Timer timer=switchTimer;
         switchTimer.schedule(new TimerTask() {
             @Override
             public void run() {
@@ -120,7 +121,12 @@ public class MyServerSocket {
                         System.currentTimeMillis() - acceptStartTime > (10 + rnd) * 1000) {
                     //切换向client
                     MainActivity.sendMsg2UIThread(MsgType.SERVER_2_CLIENT.ordinal(), "");
-                    switchTimer.cancel();
+                    //switchTimer.cancel();
+                    try {
+                        timer.cancel();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 }
             }
         }, 0, 1000);

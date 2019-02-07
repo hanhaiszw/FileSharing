@@ -34,10 +34,13 @@ public class MyClientSocket {
             e.printStackTrace();
             Log.e("hanhai", "连接服务器失败");
             return false;
+        }finally {
+            // 2/2修改
+
         }
-        // 尝试切换
         trySwitch2Server();
         Log.e("hanhai", "连接服务器成功");
+
         return true;
     }
 
@@ -46,6 +49,7 @@ public class MyClientSocket {
      */
     public void trySwitch2Server() {
         switchTimer = new Timer();
+        Timer timer = switchTimer;
         switchTimer.schedule(new TimerTask() {
             @Override
             public void run() {
@@ -53,7 +57,12 @@ public class MyClientSocket {
                 if (mySocket == null || !mySocket.socketIsActive()) {
                     //切换向server
                     MainActivity.sendMsg2UIThread(MsgType.CLIENT_2_SERVER.ordinal(), "");
-                    switchTimer.cancel();
+                    //switchTimer.cancel();
+                    try {
+                        timer.cancel();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 }
             }
         }, 0, 1000);
@@ -76,10 +85,6 @@ public class MyClientSocket {
         return mySocket != null && mySocket.socketIsActive();
     }
 
-    // client存在异常
-    public boolean hasException() {
-        return !socketIsAlive();
-    }
 
 
 //    public void sendMsg(String msg) {

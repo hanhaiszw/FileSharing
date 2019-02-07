@@ -74,6 +74,8 @@ public class EncodeFile {
         encodeFileSingleton.initSuccess = true;
     }
 
+
+
     public static void updateSingleton(String xmlFilePath) {
         File file = new File(xmlFilePath);
         if (file.exists()) {
@@ -89,7 +91,10 @@ public class EncodeFile {
         getLocalCache(itsEncodeFile);
         encodeFileSingleton.initSuccess = true;
     }
-
+    // 恢复到初始化状态
+    public static void updateSingleton() {
+        encodeFileSingleton = new EncodeFile();
+    }
 
     //对文件进行分片预处理
     private void init(File file, int K, String runModeString) {
@@ -124,9 +129,10 @@ public class EncodeFile {
         object2xml();
 
         // 文件源初始化文件
-        String msg = runModeString + ": 文件源初始化文件: " + folderPath;
-        String fileMsg = ToolUtils.getCurrentTime() + "\n"+ msg  + "\n";
-        MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(),msg);
+        String msg = runModeString + "  K = " + K + ": 文件源初始化文件: " + folderPath;
+        // 写入进行初始化的时间
+        String fileMsg = "\n" + ToolUtils.getCurrentTime() + "\n" + msg + "\n";
+        MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(), msg);
         byte[] bt_fileMsg = fileMsg.getBytes();
         ToolUtils.writeToFile(CachePath.LOG_PATH, CachePath.LOG_FILE_NAME, bt_fileMsg, bt_fileMsg.length, true);
 
@@ -240,7 +246,9 @@ public class EncodeFile {
 
 
         if (xmlFile.exists()) {
-            encodeFileSingleton = xml2obj(xmlFilePath);
+            // 获取本地数据的信息
+            updateSingleton(xmlFilePath);
+            //encodeFileSingleton = getSingleton();
         } else {
             EncodeFile newEncodeFile = new EncodeFile();
             newEncodeFile.fileName = itsEncodeFile.fileName;
@@ -265,9 +273,9 @@ public class EncodeFile {
 
 
             // 第一次接收到文件信息:
-            String msg = newEncodeFile.runModeString +": 第一次接收到文件信息: " + newEncodeFile.folderPath;
-            String fileMsg = ToolUtils.getCurrentTime() + "\n"+ msg  + "\n";
-            MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(),msg);
+            String msg = newEncodeFile.runModeString + "  K = " + newEncodeFile.K + ": 第一次接收到文件信息: " + newEncodeFile.folderPath;
+            String fileMsg = "\n" + ToolUtils.getCurrentTime() + "\n" + msg + "\n";
+            MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(), msg);
 
             byte[] bt_fileMsg = fileMsg.getBytes();
             ToolUtils.writeToFile(CachePath.LOG_PATH, CachePath.LOG_FILE_NAME, bt_fileMsg, bt_fileMsg.length, true);
@@ -302,9 +310,9 @@ public class EncodeFile {
         }
 
         // 接收到所有的文件片
-        String msg = runModeString + ": 文件接收完全，开始解码: " + folderPath;
-        String fileMsg = ToolUtils.getCurrentTime() + "\n"+ msg  + "\n";
-        MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(),msg);
+        String msg = runModeString + "  K = " + K + ": 文件接收完全，开始解码: " + folderPath;
+        String fileMsg = ToolUtils.getCurrentTime() + "\n" + msg + "\n\n";
+        MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(), msg);
 
         byte[] bt_fileMsg = fileMsg.getBytes();
         ToolUtils.writeToFile(CachePath.LOG_PATH, CachePath.LOG_FILE_NAME, bt_fileMsg, bt_fileMsg.length, true);

@@ -48,10 +48,13 @@ public class SocketMsgParse {
             // 2 partFile分片文件
             case SocketMsgContent.CODE_XML_PART_FILE:
                 if (socketMsgContent.partNo == SocketMsgContent.XML_PRATNO) {
-                    // 处理文件请求
+                    // 接收到xml文件
                     solveXMLFile(socketMsgContent);
+                    Log.d("hanhai","接收到xml文件");
                 } else {
+                    // 接收到编码数据片
                     solvePartFile(socketMsgContent);
+                    Log.d("hanhai","接收到编码数据片");
                     // 更新请求文件的数量
                     maxRequestFileNum--;
                 }

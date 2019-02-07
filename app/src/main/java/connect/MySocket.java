@@ -6,6 +6,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.Socket;
@@ -92,6 +93,7 @@ public class MySocket {
         int readBytes;
 
         FileOutputStream fos = new FileOutputStream(file, true);  //续写
+
         BufferedOutputStream bos = new BufferedOutputStream(fos);
         while (readLen != 0) {
             readBytes = readLen > 4096 ? 4096 : readLen;
