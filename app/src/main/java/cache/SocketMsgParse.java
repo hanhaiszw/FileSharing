@@ -11,7 +11,6 @@ import java.util.Vector;
 import connect.MySocket;
 import connect.SocketMsgContent;
 import data.MsgType;
-import utils.MyThreadPool;
 import utils.ToolUtils;
 
 /**
@@ -32,6 +31,9 @@ public class SocketMsgParse {
     // 最大请求文件数目
     private int maxRequestFileNum = 0;
 
+    // 连接是否有效   只统计一次
+    private boolean isUsefulConnectFlag = false;
+
     public SocketMsgParse(MySocket mySocket) {
         this.mySocket = mySocket;
     }
@@ -51,12 +53,16 @@ public class SocketMsgParse {
                     // 接收到xml文件
                     solveXMLFile(socketMsgContent);
                     Log.d("hanhai","接收到xml文件");
+                    // 建立了连接
+                    // 这里接收到xml文件视为连接建立成功
+                    ConnectCount.addTotalConnect();
                 } else {
                     // 接收到编码数据片
                     solvePartFile(socketMsgContent);
                     Log.d("hanhai","接收到编码数据片");
                     // 更新请求文件的数量
                     maxRequestFileNum--;
+
                 }
                 break;
             // 3 leave 或者其他信息
@@ -228,6 +234,12 @@ public class SocketMsgParse {
             socketMsgContent.requestLen = requestBytes.length;
             socketMsgContent.requestBytes = requestBytes;
             mySocket.sendSocketMsgContent(socketMsgContent);
+
+            // 需要发送文件请求  说明连接是有效的
+            if(!isUsefulConnectFlag){
+                ConnectCount.addUsefulConnect();
+                isUsefulConnectFlag = true;
+            }
         }
     }
 

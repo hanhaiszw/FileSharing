@@ -117,6 +117,7 @@ public class MyServerSocket {
 
                 // 当没有client在线  且等待时间超过了10s 则开始尝试切换
                 // 10 到 20 秒之间开始切换
+                // 调整Server等待时长为20+    2019/2/20
                 if (mySockets.size() == 0 &&
                         System.currentTimeMillis() - acceptStartTime > (10 + rnd) * 1000) {
                     //切换向client

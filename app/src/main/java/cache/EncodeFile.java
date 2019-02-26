@@ -44,6 +44,8 @@ public class EncodeFile {
     //运行模式
     private String runModeString;
 
+    private long createTime;
+
     //文件片的信息
     @XStreamAlias("subfileInfor")
     private Vector<PartFile> partFileVector = new Vector<>();
@@ -75,7 +77,6 @@ public class EncodeFile {
     }
 
 
-
     public static void updateSingleton(String xmlFilePath) {
         File file = new File(xmlFilePath);
         if (file.exists()) {
@@ -91,6 +92,7 @@ public class EncodeFile {
         getLocalCache(itsEncodeFile);
         encodeFileSingleton.initSuccess = true;
     }
+
     // 恢复到初始化状态
     public static void updateSingleton() {
         encodeFileSingleton = new EncodeFile();
@@ -124,12 +126,18 @@ public class EncodeFile {
             partFileVector.add(partFile);
         }
 
-
-        //写入配置文件
+        // 最好 初始化完成后立即开启Server
+        createTime = System.currentTimeMillis();
+        // 写入配置文件
         object2xml();
 
+
+        int index1 = folderPath.lastIndexOf(File.separator);
+        String folderName = folderPath.substring(index1 + 1);
+
+
         // 文件源初始化文件
-        String msg = runModeString + "  K = " + K + ": 文件源初始化文件: " + folderPath;
+        String msg = runModeString + "  K = " + K + ": 文件源初始化文件: " + folderName;
         // 写入进行初始化的时间
         String fileMsg = "\n" + ToolUtils.getCurrentTime() + "\n" + msg + "\n";
         MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(), msg);
@@ -152,6 +160,7 @@ public class EncodeFile {
                         "currentPieceNum",
                         "AndroidId",
                         "runModeString",
+                        "createTime",
                         "partFileVector",
                         "xmlFileName",
                         "encodeFileSingleton",
@@ -225,7 +234,6 @@ public class EncodeFile {
         //在此恢复
         for (PartFile partFile : encodeFile.partFileVector) {
             partFile.recoverOmitField(encodeFile.folderPath, encodeFile.K, encodeFile.AndroidId);
-
         }
 
         return encodeFile;
@@ -259,6 +267,7 @@ public class EncodeFile {
             newEncodeFile.AndroidId = itsEncodeFile.AndroidId;
             newEncodeFile.K = itsEncodeFile.K;
             newEncodeFile.runModeString = itsEncodeFile.runModeString;
+            newEncodeFile.createTime = itsEncodeFile.createTime;
             newEncodeFile.currentPieceNum = 0;
             //处理partFile
             for (PartFile partFile : itsEncodeFile.partFileVector) {
@@ -272,8 +281,11 @@ public class EncodeFile {
             encodeFileSingleton = newEncodeFile;
 
 
+            int index1 = folderPath.lastIndexOf(File.separator);
+            String folderName = folderPath.substring(index1 + 1);
+
             // 第一次接收到文件信息:
-            String msg = newEncodeFile.runModeString + "  K = " + newEncodeFile.K + ": 第一次接收到文件信息: " + newEncodeFile.folderPath;
+            String msg = newEncodeFile.runModeString + "  K = " + newEncodeFile.K + ": 第一次接收到文件信息: " + folderName;
             String fileMsg = "\n" + ToolUtils.getCurrentTime() + "\n" + msg + "\n";
             MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(), msg);
 
@@ -309,14 +321,30 @@ public class EncodeFile {
             return;
         }
 
+
+        int index1 = folderPath.lastIndexOf(File.separator);
+        String folderName = folderPath.substring(index1 + 1);
+        // 计算从开始到完成所需要的时间
+        long currentTime = System.currentTimeMillis();
+        double interval = (double) (currentTime - createTime) / (1000 * 60);
+        String str_db = String.format("%.2f", interval);
+
+
         // 接收到所有的文件片
-        String msg = runModeString + "  K = " + K + ": 文件接收完全，开始解码: " + folderPath;
-        String fileMsg = ToolUtils.getCurrentTime() + "\n" + msg + "\n\n";
+        String msg = runModeString + "  K = " + K + ": 文件接收完全，开始解码: " + folderName;
         MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(), msg);
 
+
+        // 写入结果文件
+        String revFinishMsg = runModeString + "  K = " + K + ": 文件接收完成共用" + str_db + "分钟(" + folderName + ")";
+        MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(), revFinishMsg);
+
+        String fileMsg = ToolUtils.getCurrentTime() + "\n" + revFinishMsg + "\n\n";
         byte[] bt_fileMsg = fileMsg.getBytes();
         ToolUtils.writeToFile(CachePath.LOG_PATH, CachePath.LOG_FILE_NAME, bt_fileMsg, bt_fileMsg.length, true);
 
+        // 写入有效连接/总连接次数
+        ConnectCount.write2logFile();
 
         //开始解码恢复文件
         MyThreadPool.execute(() -> {
@@ -343,7 +371,7 @@ public class EncodeFile {
             MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(), "恢复数据成功");
 
             // 打开文件
-            //ToolUtils.openFile(MainActivity.getContext(),outFilePath);
+            //ToolUtils.openFile(outFilePath);
         });
 
     }

@@ -1,7 +1,6 @@
 package com.example.mroot.filesharing;
 
 import android.annotation.SuppressLint;
-import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -40,7 +39,6 @@ import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
 import cache.EncodeFile;
-
 import data.CachePath;
 import data.MsgType;
 import data.RunMode;
@@ -341,6 +339,8 @@ public class MainActivity extends AppCompatActivity {
                         sendMsg2UIThread(MsgType.ENCODE_FILE_CHANGE.ordinal(), "");
                         Log.i("hanhai", "文件预处理结束");
                         MainActivity.sendMsg2UIThread(MsgType.SHOW_MSG.ordinal(), "文件预处理结束");
+                        //打开Server模式
+                        openServer();
                     });
                 })
                 .show();
@@ -526,6 +526,11 @@ public class MainActivity extends AppCompatActivity {
                             //Toast.makeText(this, "用户从设置回来了", Toast.LENGTH_SHORT).show();
                         })
                         .start();
+                break;
+                // 打开记录文件
+            case R.id.item_open_logFile:
+                String logFilePath = CachePath.LOG_PATH+File.separator+CachePath.LOG_FILE_NAME;
+                ToolUtils.openFile(logFilePath);
                 break;
             default:
                 break;

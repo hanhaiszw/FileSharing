@@ -278,14 +278,13 @@ public class ToolUtils {
 
     /**
      * 打开文件
-     * @param context
      * @param aFile
      */
-    public static void openFile(Context context, File aFile) {
+    public static void openFile(File aFile) {
         MainActivity.sendMsg2UIThread(MsgType.OPEN_FILE.ordinal(),aFile);
     }
-    public static void openFile(Context context, String aFile) {
-        openFile(context, new File(aFile));
+    public static void openFile(String aFile) {
+        openFile(new File(aFile));
     }
 
     //删除文件或文件夹

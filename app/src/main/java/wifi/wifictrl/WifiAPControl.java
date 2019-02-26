@@ -332,18 +332,21 @@ public class WifiAPControl {
                 // 查看附近有多少热点
                 // 数据测试时用的是3
                 // 如果附近热点数目大于5  则不切换  继续在client状态下工作
-                if (currentPieceNum >= totalPieceNum) {
-                    openServer();
-                } else {
-                    List<ScanResult> list = wifiAdmin.getWifiScanResult();
-                    List<SSIDSelect.SSIDInfo> ssidInfoList = ssidSelect.sortUsefulAPByRssi(list);
-                    // 附近已经有3个以上的热点了, 而且本机数据还没接收完全，就不要再切换到server了
-                    if (ssidInfoList.size() >= 10) {
-                        openClient();
-                    } else {
-                        openServer();
-                    }
-                }
+//                if (currentPieceNum >= totalPieceNum) {
+//                    openServer();
+//                } else {
+                    // 取消此部分优化
+//                    List<ScanResult> list = wifiAdmin.getWifiScanResult();
+//                    List<SSIDSelect.SSIDInfo> ssidInfoList = ssidSelect.sortUsefulAPByRssi(list);
+//                    // 附近已经有3个以上的热点了, 而且本机数据还没接收完全，就不要再切换到server了
+//                    if (ssidInfoList.size() >= 10) {
+//                        openClient();
+//                    } else {
+//                        openServer();
+//                    }
+//                    openServer();
+//                }
+                openServer();
             } else {
                 openClient();
             }

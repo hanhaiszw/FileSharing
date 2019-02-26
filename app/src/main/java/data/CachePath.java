@@ -9,13 +9,18 @@ public class CachePath {
     public final static String LOG_PATH;   //文件接收时间等信息目录
     public final static String RECEIVE_TEMP_PATH; //接收文件暂存地址
 
-    public final static String LOG_FILE_NAME = "log.txt";
+    //public final static String LOG_FILE_NAME = "log.txt";
+    public final static String LOG_FILE_NAME;
+
     static {
         APP_PATH = ToolUtils.createFolder(ToolUtils.getSDCardPath(), "0FileSharing");
         TEMP_PATH = ToolUtils.createFolder(APP_PATH, "Temp");
-        RECEIVE_TEMP_PATH = ToolUtils.createFolder(APP_PATH,"ReceiveTemp");
+        RECEIVE_TEMP_PATH = ToolUtils.createFolder(APP_PATH, "ReceiveTemp");
         CRASH_PATH = ToolUtils.createFolder(APP_PATH, "Crash");
         LOG_PATH = ToolUtils.createFolder(APP_PATH, "Log");
+        // 按天记录
+        LOG_FILE_NAME = "log" + ToolUtils.getCurrentTime("yy_MM_dd") + ".txt";
+        ToolUtils.createFile(LOG_PATH, LOG_FILE_NAME);
     }
 
     private CachePath() {

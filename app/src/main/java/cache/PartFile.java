@@ -17,6 +17,7 @@ import java.util.Vector;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import nc.NCUtils;
+import utils.MyThreadPool;
 import utils.ToolUtils;
 
 
@@ -492,6 +493,7 @@ abstract class PartFile {
 //        }
         //再生成一个再编码文件
         //recoverPartFile();
+        //return file;
         return reencodePartFile();
     }
 
@@ -509,6 +511,10 @@ abstract class PartFile {
         ToolUtils.deleteFile(file);
         // 重开线程 再编码
         //MyThreadPool.execute(() -> reencodePartFile());
+//        Vector<File> files = ToolUtils.getUnderFiles(reencodeFilePath);
+//        if(files.size()==0){
+//            MyThreadPool.execute(() -> reencodePartFile());
+//        }
     }
 
 
