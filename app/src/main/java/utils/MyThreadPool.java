@@ -7,7 +7,8 @@ import java.util.concurrent.Executors;
  * 线程池
  */
 public class MyThreadPool {
-    private static ExecutorService cachedThreadPool = Executors.newCachedThreadPool();
+    //private static ExecutorService cachedThreadPool = Executors.newCachedThreadPool();
+    private static ExecutorService cachedThreadPool = Executors.newFixedThreadPool(30);
 
     private MyThreadPool() {
     }

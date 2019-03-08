@@ -293,7 +293,7 @@ public class WifiAPControl {
             String ssid = ssidSelect.selectSSID(list);
 
             if (ssid != "") {
-                Log.e("hanhai", "获取到有效ssid");
+                Log.d("hanhai", "获取到有效ssid");
                 //hasUsefulSSID = true;
                 String currentSSID = wifiAdmin.currentConnectSSID();
                 Log.v("hanhai", "currentSSID = " + currentSSID);

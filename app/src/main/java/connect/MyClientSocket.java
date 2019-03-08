@@ -63,6 +63,7 @@ public class MyClientSocket {
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
+                    Log.d("hanhai","clientsocket定时器切换模式");
                 }
             }
         }, 0, 1000);

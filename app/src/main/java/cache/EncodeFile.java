@@ -178,7 +178,8 @@ public class EncodeFile {
                         "pieceFilePath",
                         "reencodeFilePath",
                         "AndroidId",
-                        "readWriteLock"
+                        "readWriteLock",
+                        "sendFiles"
                 });
 
         XStream xStream = new XStream(new Sun14ReflectionProvider(new FieldDictionary(sorter)));
@@ -394,7 +395,9 @@ public class EncodeFile {
                     // 更新xml
                     object2xml();
                     //
-                    recover();
+                    if (currentPieceNum >= partNum * K) {
+                        MyThreadPool.execute(() -> recover());
+                    }
                 }
                 //删除临时文件
                 ToolUtils.deleteFile(socketMsgContent.file);

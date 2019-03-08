@@ -1,5 +1,7 @@
 package connect;
 
+import android.util.Log;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
@@ -74,6 +76,7 @@ public class MySocket {
                 }
             } catch (IOException e) {
                 e.printStackTrace();
+                Log.e("hanhai",e.toString());
                 System.out.println("client端socket关闭");
             } finally {
                 //关闭socket操作
@@ -121,16 +124,26 @@ public class MySocket {
          * 分支一  文件请求
          */
         if (socketMsgContent.code == SocketMsgContent.CODE_FILE_REQUEST) {
+            //
+            Log.d("hanhai","获取到文件请求信息");
+
             socketMsgContent.requestLen = dis.readInt();
             byte[] bytes = new byte[socketMsgContent.requestLen];
             dis.readFully(bytes);
             socketMsgContent.requestBytes = bytes;
+
 
         } else if (socketMsgContent.code == SocketMsgContent.CODE_XML_PART_FILE) {
             /**
              * 分支二  接收xml文件或是partfile
              */
             socketMsgContent.partNo = dis.readInt();
+
+//            if(socketMsgContent.partNo==SocketMsgContent.XML_PRATNO){
+//                Log.d("hanhai","获取到xml文件");
+//            }else{
+//                Log.d("hanhai","获取到part文件");
+//            }
             socketMsgContent.fileLen = dis.readInt();
 
             socketMsgContent.fileName = dis.readUTF();
@@ -168,7 +181,7 @@ public class MySocket {
         }
     }
 
-    public void sendSocketMsgContent(SocketMsgContent socketMsgContent) {
+    public synchronized void sendSocketMsgContent(SocketMsgContent socketMsgContent) {
         if (socketMsgContent == null) {
             return;
         }
@@ -213,6 +226,7 @@ public class MySocket {
         try {
             DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
             dos.writeUTF(msg);
+
             dos.flush();
         } catch (IOException e) {
             e.printStackTrace();

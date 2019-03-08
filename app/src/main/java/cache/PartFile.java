@@ -56,6 +56,9 @@ abstract class PartFile {
     @XStreamOmitField
     private ReentrantReadWriteLock readWriteLock;
 
+    @XStreamOmitField
+    private Vector<String> sendFiles = new Vector<>();
+
     PartFile() {
         readWriteLock = new ReentrantReadWriteLock(true);
     }
@@ -86,7 +89,7 @@ abstract class PartFile {
         this.partFilePath = folderPath + File.separator + partNo;
         this.pieceFilePath = partFilePath + File.separator + "pieceFilePath";
         this.reencodeFilePath = partFilePath + File.separator + "reencodeFilePath";
-        if(readWriteLock == null){
+        if (readWriteLock == null) {
             readWriteLock = new ReentrantReadWriteLock(true);
         }
     }
@@ -168,7 +171,7 @@ abstract class PartFile {
      * @return
      */
     public File reencodePartFile() {
-        Log.i("hanhai","再编码开始");
+        Log.i("hanhai", "再编码开始");
 
         Vector<File> files = null;
         try {
@@ -244,7 +247,7 @@ abstract class PartFile {
             return null;
         }
 
-        Log.i("hanhai","再编码结束");
+        Log.i("hanhai", "再编码结束");
         return retFile;
     }
 
@@ -478,23 +481,107 @@ abstract class PartFile {
         return null;
     }
 
+
+    /**
+     * 生成虚拟空洞文件数据
+     * 作为虚拟数据发送
+     * @return
+     */
+    public File getNCVirtualFile() {
+        Vector<File> files = null;
+        try {
+            readWriteLock.readLock().lock();
+            files = ToolUtils.getUnderFiles(pieceFilePath);
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            readWriteLock.readLock().unlock();
+        }
+
+        int fileSize = files.size();
+        if (files.size() == 1) {
+            return files.get(0);
+        } else if (files.size() == 0) {
+            return null;
+        }
+        // 随机矩阵
+        byte[] randomMatrix = new byte[fileSize];
+        Random random = new Random();
+        random.nextBytes(randomMatrix);
+
+        //long startTime = System.currentTimeMillis();
+        byte[] coef = new byte[fileSize * K];
+        byte[][] cf = intArrVector2byteArray(coefMatrix);
+        for (int i = 0; i < coefMatrix.size(); i++) {
+            for (int j = 0; j < K; j++) {
+                coef[i * K + j] = cf[i][j];
+            }
+        }
+
+        byte[] ret = NCUtils.Multiply(randomMatrix,1,fileSize,coef,fileSize,K);
+
+
+        // 结果文件
+        File retFile = ToolUtils.createFile(reencodeFilePath,
+                partNo + "_" + ToolUtils.randomString(5) + ".nc");
+        try {
+            RandomAccessFile retAf = new RandomAccessFile(retFile, "rw");
+            retAf.seek(0);
+            retAf.writeByte(K);
+            retAf.write(ret,0,K);
+            retAf.seek(pieceFileLen-1);
+            retAf.writeByte(K);
+            retAf.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+
+//        if(retFile.length() == pieceFileLen){
+//            System.out.println("长度验证成功");
+//        }
+        //float val = (float) (System.currentTimeMillis() - startTime)/1000;
+        //System.out.println("取虚拟数据所花时间" + val);
+
+        return retFile;
+    }
+
     //因为NC下 RS下都会用到这种方法 所以在父类定义
     //此方法需要同步
     //需要保证取到的文件不同，文件发送后，还需要删除
     public File getNCSendFile(byte[] request) {
 //        Vector<File> files = ToolUtils.getUnderFiles(reencodeFilePath);
 //        File file = null;
+//
+//
 //        if (files.size() == 0) {
 //            file = reencodePartFile();
 //        } else {
 //            //对文件进行排序  取最新的文件
 //            ToolUtils.fileDesSort(files);
-//            file = files.get(0);
+//            boolean flag = false;
+//            for(int i = 0;i<files.size();i++){
+//                File temp = files.get(i);
+//                if(!sendFiles.contains(temp.getName())){
+//                    file = temp;
+//                    flag = true;
+//                    break;
+//                }
+//            }
+//            if(!flag){
+//                file = reencodePartFile();
+//            }
+//            //file = files.get(0);
 //        }
-        //再生成一个再编码文件
-        //recoverPartFile();
-        //return file;
-        return reencodePartFile();
+//        //再生成一个再编码文件
+//        //recoverPartFile();
+//
+//        sendFiles.add(file.getName());
+//
+//        return file;
+        // 再编码数据
+        //return reencodePartFile();
+        return getNCVirtualFile();
     }
 
     /**
@@ -510,7 +597,7 @@ abstract class PartFile {
         // 删除再编码文件
         ToolUtils.deleteFile(file);
         // 重开线程 再编码
-        //MyThreadPool.execute(() -> reencodePartFile());
+//        MyThreadPool.execute(() -> reencodePartFile());
 //        Vector<File> files = ToolUtils.getUnderFiles(reencodeFilePath);
 //        if(files.size()==0){
 //            MyThreadPool.execute(() -> reencodePartFile());
@@ -560,5 +647,6 @@ abstract class PartFile {
     public abstract File getSendFile(byte[] coef);
 
     public abstract void afterSendFile(File file);
+
     public abstract String getMode();
 }

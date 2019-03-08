@@ -11,6 +11,7 @@ import java.util.Vector;
 import connect.MySocket;
 import connect.SocketMsgContent;
 import data.MsgType;
+import utils.MyThreadPool;
 import utils.ToolUtils;
 
 /**
@@ -33,6 +34,9 @@ public class SocketMsgParse {
 
     // 连接是否有效   只统计一次
     private boolean isUsefulConnectFlag = false;
+
+    // 记录这次请求了几个数据
+    private volatile int requestNum = 0;
 
     public SocketMsgParse(MySocket mySocket) {
         this.mySocket = mySocket;
@@ -58,11 +62,14 @@ public class SocketMsgParse {
                     ConnectCount.addTotalConnect();
                 } else {
                     // 接收到编码数据片
+                    --requestNum;
                     solvePartFile(socketMsgContent);
                     Log.d("hanhai","接收到编码数据片");
                     // 更新请求文件的数量
                     maxRequestFileNum--;
-
+                    if(requestNum <=0){
+                        sendFileQuestInfor();
+                    }
                 }
                 break;
             // 3 leave 或者其他信息
@@ -71,10 +78,10 @@ public class SocketMsgParse {
                 solveLeave();
                 break;
             // 4 对方的一次文件请求处理完毕
-            case SocketMsgContent.CODE_ANSWER_END:
-                // 再次请求文件
-                sendFileQuestInfor();
-                break;
+//            case SocketMsgContent.CODE_ANSWER_END:
+//                // 再次请求文件
+//                sendFileQuestInfor();
+//                break;
             default:
                 break;
         }
@@ -148,23 +155,44 @@ public class SocketMsgParse {
         // 防止按顺序取partfile
         Collections.shuffle(requestVector);
 
+
         for (byte[] request : requestVector) {
             int partNo = (int) request[0];
             //
             Log.d("hanhai", "取第" + partNo + "部分数据");
+            // 找数据
+            // 3_7
+//            MyThreadPool.execute(new Runnable() {
+//                @Override
+//                public void run() {
+//                    // 此处比较耗时
+//                    File file = encodeFile.getSendFile(partNo, request);
+//
+//                    if (file != null) {
+//                        SocketMsgContent msgContent = new SocketMsgContent(
+//                                SocketMsgContent.SERVER_CLIENT_MSG, partNo, file);
+//                        mySocket.sendSocketMsgContent(msgContent);
+//                        encodeFile.afterSendFile(partNo, file);
+//                    }
+//                }
+//            });
+
             File file = encodeFile.getSendFile(partNo, request);
+
             if (file != null) {
                 SocketMsgContent msgContent = new SocketMsgContent(
                         SocketMsgContent.SERVER_CLIENT_MSG, partNo, file);
                 mySocket.sendSocketMsgContent(msgContent);
                 encodeFile.afterSendFile(partNo, file);
             }
+
         }
 
+        // 3_7
         // 一次文件请求应答结束  告知对方
-        SocketMsgContent msgContent = new SocketMsgContent(
-                SocketMsgContent.SERVER_CLIENT_MSG, SocketMsgContent.CODE_ANSWER_END);
-        mySocket.sendSocketMsgContent(msgContent);
+//        SocketMsgContent msgContent = new SocketMsgContent(
+//                SocketMsgContent.SERVER_CLIENT_MSG, SocketMsgContent.CODE_ANSWER_END);
+//        mySocket.sendSocketMsgContent(msgContent);
 
     }
 
@@ -178,6 +206,9 @@ public class SocketMsgParse {
     private void solvePartFile(SocketMsgContent socketMsgContent) {
         //保存对方发送来的文件
         EncodeFile.getSingleton().savePartFile(socketMsgContent);
+
+        // 文件接收处理成功
+        Log.d("hanhai","文件接收处理成功");
     }
 
     private synchronized void solveLeave() {
@@ -218,6 +249,14 @@ public class SocketMsgParse {
             // 控制文件请求数目
             if(row > maxRequestFileNum)
                 row = maxRequestFileNum;
+
+            if(row ==0){
+                return;
+            }
+            // 请求的个数
+            requestNum = row;
+
+
             int col = requestVector.get(0).length;
             byte[] requestBytes = new byte[row * col];
             for (int i = 0; i < row; i++) {
@@ -240,6 +279,8 @@ public class SocketMsgParse {
                 ConnectCount.addUsefulConnect();
                 isUsefulConnectFlag = true;
             }
+
+            Log.d("hanhai","向对方请求文件");
         }
     }
 

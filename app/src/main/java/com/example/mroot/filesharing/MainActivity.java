@@ -307,6 +307,7 @@ public class MainActivity extends AppCompatActivity {
                 //Toast.makeText(context, filePath, Toast.LENGTH_SHORT).show();
                 Log.v("hanhai", filePath);
                 File file = new File(filePath);
+
                 solveSelectFile(file);
             }
         }
