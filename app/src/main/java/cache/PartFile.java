@@ -483,6 +483,7 @@ abstract class PartFile {
 
 
     /**
+     * 3-8 hanhai修改
      * 生成虚拟空洞文件数据
      * 作为虚拟数据发送
      * @return

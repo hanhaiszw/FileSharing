@@ -503,7 +503,14 @@ public class MainActivity extends AppCompatActivity {
                         .title("设置K值")
                         .inputType(InputType.TYPE_CLASS_NUMBER)
                         .input(runMode.K + "", null, (dialog, input) -> {
-                            int k = Integer.parseInt(input.toString());
+                            int k = 0;
+                            try {
+                                k = Integer.parseInt(input.toString());
+                            } catch (NumberFormatException e) {
+                                e.printStackTrace();
+                                // 如果用户没有输入任何值，而点击了确定按钮，就会执行到此处
+                                return;
+                            }
                             if (k < 2 || k > 50) {  // 设置K值范围 2 到 50
                                 Toast.makeText(MainActivity.this, "K值在2到10之间", Toast.LENGTH_SHORT).show();
                             } else {

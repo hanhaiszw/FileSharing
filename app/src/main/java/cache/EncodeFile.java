@@ -328,7 +328,8 @@ public class EncodeFile {
         // 计算从开始到完成所需要的时间
         long currentTime = System.currentTimeMillis();
         double interval = (double) (currentTime - createTime) / (1000 * 60);
-        String str_db = String.format("%.2f", interval);
+        // 3/17修改   结果只保留一位小数
+        String str_db = String.format("%.1f", interval);
 
 
         // 接收到所有的文件片
