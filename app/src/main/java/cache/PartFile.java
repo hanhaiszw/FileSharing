@@ -580,9 +580,11 @@ abstract class PartFile {
 //        sendFiles.add(file.getName());
 //
 //        return file;
+
         // 再编码数据
-        //return reencodePartFile();
-        return getNCVirtualFile();
+
+        //return getNCVirtualFile();  // 返回虚拟数据
+        return reencodePartFile();    // 返回再编码文件
     }
 
     /**
